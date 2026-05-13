@@ -2,932 +2,642 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8" />
-<title>Last Delivery</title>
+<title>Lauf vor dem verrückten Alten!</title>
 <style>
   html, body {
     margin: 0;
     padding: 0;
-    background: #000;
-    color: #d8d8d8;
+    background: #1a1410;
+    color: #f0e6d2;
     font-family: "Courier New", monospace;
     overflow: hidden;
     height: 100%;
+    user-select: none;
   }
   #game {
     display: block;
     margin: 0 auto;
-    background: #000;
+    background: #2a3520;
     image-rendering: pixelated;
-    cursor: crosshair;
+    cursor: none;
   }
   #hud {
     position: fixed;
-    top: 10px;
-    left: 10px;
-    font-size: 14px;
-    text-shadow: 0 0 4px #000, 0 0 8px #000;
+    top: 12px;
+    left: 12px;
+    font-size: 16px;
+    text-shadow: 2px 2px 0 #000;
     pointer-events: none;
-    user-select: none;
-    line-height: 1.4em;
+    line-height: 1.5em;
   }
-  #subtitle {
+  #hud .label { color: #ffcc66; }
+  #hud .value { color: #fff; }
+  #shout {
     position: fixed;
-    bottom: 30px;
+    top: 60px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 18px;
-    text-align: center;
-    text-shadow: 0 0 6px #000;
+    font-size: 22px;
+    color: #ff5544;
+    text-shadow: 2px 2px 0 #000;
     pointer-events: none;
-    user-select: none;
-    max-width: 80%;
     opacity: 0;
-    transition: opacity 0.4s;
+    transition: opacity 0.2s;
+    font-weight: bold;
+    white-space: nowrap;
   }
-  #subtitle.show { opacity: 1; }
+  #shout.show { opacity: 1; }
   #overlay {
     position: fixed;
     inset: 0;
-    background: #000;
+    background: rgba(0,0,0,0.85);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
+    padding: 20px;
     z-index: 10;
-    transition: opacity 0.8s;
   }
-  #overlay.hidden {
-    opacity: 0;
-    pointer-events: none;
-  }
+  #overlay.hidden { display: none; }
   #overlay h1 {
+    color: #ff5544;
     font-size: 42px;
-    margin: 0 0 10px 0;
-    color: #b00000;
-    letter-spacing: 6px;
-    text-shadow: 0 0 8px #500, 0 0 24px #200;
+    margin: 0 0 10px;
+    text-shadow: 3px 3px 0 #000;
   }
   #overlay h2 {
-    font-size: 20px;
-    margin: 0 0 30px 0;
-    color: #888;
-    letter-spacing: 2px;
+    color: #ffcc66;
+    font-size: 24px;
+    margin: 0 0 20px;
   }
   #overlay p {
-    max-width: 500px;
+    max-width: 520px;
     line-height: 1.6em;
-    color: #aaa;
-    font-size: 14px;
+    font-size: 16px;
+    color: #d8d8d8;
   }
   #overlay button {
     margin-top: 20px;
-    background: #1a1a1a;
-    border: 1px solid #b00000;
-    color: #d8d8d8;
-    padding: 12px 28px;
     font-family: inherit;
-    font-size: 16px;
+    font-size: 20px;
+    padding: 12px 28px;
+    background: #ff5544;
+    color: #fff;
+    border: 3px solid #fff;
     cursor: pointer;
-    letter-spacing: 3px;
+    text-shadow: 2px 2px 0 #000;
+    box-shadow: 4px 4px 0 #000;
   }
-  #overlay button:hover {
-    background: #2a0000;
-    color: #ff5555;
-  }
-  .key { color: #b00000; }
-  #vignette {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    box-shadow: inset 0 0 200px 60px #000;
-    z-index: 5;
+  #overlay button:hover { background: #ff7766; }
+  #overlay .controls {
+    margin-top: 10px;
+    color: #aaa;
+    font-size: 14px;
   }
 </style>
 </head>
 <body>
 <canvas id="game" width="960" height="600"></canvas>
-<div id="hud"></div>
-<div id="subtitle"></div>
-<div id="vignette"></div>
-
+<div id="hud">
+  <div><span class="label">Zeit überlebt:</span> <span class="value" id="time">0.0s</span></div>
+  <div><span class="label">Leben:</span> <span class="value" id="lives">3</span></div>
+  <div><span class="label">Bestzeit:</span> <span class="value" id="best">0.0s</span></div>
+</div>
+<div id="shout"></div>
 <div id="overlay">
-  <h1>LAST DELIVERY</h1>
-  <h2>Bestellung #616</h2>
+  <h1>LAUF VOR DEM VERRÜCKTEN ALTEN!</h1>
+  <h2>Er hat 'ne Bierflasche. Und er ist sauer.</h2>
   <p>
-    Du bist Pizzalieferant. Letzte Lieferung der Nacht.<br>
-    Der Kunde hat dich erwartet... aber das ist <i>kein Mensch</i>.<br><br>
-    <span class="key">WASD</span> bewegen &nbsp;
-    <span class="key">MAUS</span> Taschenlampe zielen<br>
-    <span class="key">LMB</span> schießen (sobald Waffe gefunden)<br>
-    <span class="key">E</span> Telefon benutzen<br>
-    <span class="key">SHIFT</span> sprinten (kurz)
+    Der alte Herbert ist heute besonders schlecht drauf. Er hat sein letztes Bier
+    nicht ausgetrunken und sucht jetzt jemanden, dem er eine überziehen kann.
+    Renn um dein Leben! Sammel Bierflaschen ein, damit er kurz abgelenkt ist.
   </p>
-  <button id="startBtn">FLIEHEN</button>
+  <button id="start">LOS GEHT'S</button>
+  <div class="controls">Bewegen: WASD oder Pfeiltasten · Sprint: Shift (kostet Ausdauer)</div>
 </div>
 
 <script>
-"use strict";
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
 
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-const hud = document.getElementById("hud");
-const subtitleEl = document.getElementById("subtitle");
-const overlay = document.getElementById("overlay");
-const startBtn = document.getElementById("startBtn");
+  const timeEl = document.getElementById('time');
+  const livesEl = document.getElementById('lives');
+  const bestEl = document.getElementById('best');
+  const shoutEl = document.getElementById('shout');
+  const overlay = document.getElementById('overlay');
+  const startBtn = document.getElementById('start');
 
-const W = canvas.width;
-const H = canvas.height;
-
-// World is bigger than the screen.
-const WORLD_W = 2400;
-const WORLD_H = 1800;
-const TILE = 40;
-
-const keys = {};
-const mouse = { x: W / 2, y: H / 2, down: false };
-
-addEventListener("keydown", e => {
-  keys[e.key.toLowerCase()] = true;
-  if (e.key === " ") e.preventDefault();
-});
-addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
-canvas.addEventListener("mousemove", e => {
-  const r = canvas.getBoundingClientRect();
-  mouse.x = (e.clientX - r.left) * (canvas.width / r.width);
-  mouse.y = (e.clientY - r.top) * (canvas.height / r.height);
-});
-canvas.addEventListener("mousedown", () => { mouse.down = true; });
-canvas.addEventListener("mouseup", () => { mouse.down = false; });
-
-// --- Audio (procedural) ---
-let audioCtx = null;
-function ensureAudio() {
-  if (!audioCtx) {
-    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
-    catch (e) { audioCtx = null; }
-  }
-}
-function beep(freq, dur, type = "sine", vol = 0.15) {
-  if (!audioCtx) return;
-  const t = audioCtx.currentTime;
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = type;
-  o.frequency.setValueAtTime(freq, t);
-  g.gain.setValueAtTime(vol, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g).connect(audioCtx.destination);
-  o.start(t);
-  o.stop(t + dur);
-}
-function gunshot() {
-  if (!audioCtx) return;
-  const t = audioCtx.currentTime;
-  const bufferSize = audioCtx.sampleRate * 0.25;
-  const buf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) {
-    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
-  }
-  const src = audioCtx.createBufferSource();
-  src.buffer = buf;
-  const g = audioCtx.createGain();
-  g.gain.setValueAtTime(0.4, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
-  const filter = audioCtx.createBiquadFilter();
-  filter.type = "lowpass";
-  filter.frequency.value = 1200;
-  src.connect(filter).connect(g).connect(audioCtx.destination);
-  src.start(t);
-}
-function demonGrowl() {
-  if (!audioCtx) return;
-  const t = audioCtx.currentTime;
-  const o = audioCtx.createOscillator();
-  const o2 = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = "sawtooth"; o2.type = "square";
-  o.frequency.setValueAtTime(70, t);
-  o.frequency.linearRampToValueAtTime(45, t + 0.8);
-  o2.frequency.setValueAtTime(73, t);
-  o2.frequency.linearRampToValueAtTime(48, t + 0.8);
-  g.gain.setValueAtTime(0.0, t);
-  g.gain.linearRampToValueAtTime(0.18, t + 0.1);
-  g.gain.linearRampToValueAtTime(0.0, t + 0.9);
-  o.connect(g); o2.connect(g); g.connect(audioCtx.destination);
-  o.start(t); o2.start(t); o.stop(t + 0.95); o2.stop(t + 0.95);
-}
-function policeSiren(duration = 4) {
-  if (!audioCtx) return;
-  const t0 = audioCtx.currentTime;
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = "square";
-  for (let i = 0; i < duration * 2; i++) {
-    o.frequency.setValueAtTime(i % 2 ? 720 : 480, t0 + i * 0.5);
-  }
-  g.gain.setValueAtTime(0.08, t0);
-  g.gain.linearRampToValueAtTime(0, t0 + duration);
-  o.connect(g).connect(audioCtx.destination);
-  o.start(t0); o.stop(t0 + duration);
-}
-
-// --- World generation ---
-// Walls: rectangles {x,y,w,h}
-let walls = [];
-let phoneBooth = null;
-let weaponPickup = null;
-let player, demon;
-
-function rectsOverlap(a, b) {
-  return a.x < b.x + b.w && a.x + a.w > b.x &&
-         a.y < b.y + b.h && a.y + a.h > b.y;
-}
-function pointInRect(px, py, r) {
-  return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
-}
-
-function buildWorld() {
-  walls = [];
-  // outer border
-  walls.push({ x: 0, y: 0, w: WORLD_W, h: 20 });
-  walls.push({ x: 0, y: WORLD_H - 20, w: WORLD_W, h: 20 });
-  walls.push({ x: 0, y: 0, w: 20, h: WORLD_H });
-  walls.push({ x: WORLD_W - 20, y: 0, w: 20, h: WORLD_H });
-
-  // Apartment block 1 (top-left) - where you started the delivery
-  walls.push({ x: 200, y: 200, w: 400, h: 30 });
-  walls.push({ x: 200, y: 200, w: 30, h: 250 });
-  walls.push({ x: 570, y: 200, w: 30, h: 100 });
-  walls.push({ x: 570, y: 350, w: 30, h: 100 });
-  walls.push({ x: 200, y: 420, w: 200, h: 30 });
-  walls.push({ x: 470, y: 420, w: 130, h: 30 });
-  // interior wall
-  walls.push({ x: 350, y: 230, w: 30, h: 100 });
-
-  // Random crates / cars scattered
-  const decor = [
-    { x: 800, y: 350, w: 80, h: 40 },
-    { x: 950, y: 500, w: 120, h: 60 },
-    { x: 1200, y: 250, w: 60, h: 60 },
-    { x: 1400, y: 600, w: 200, h: 40 },
-    { x: 1700, y: 400, w: 40, h: 200 },
-    { x: 900, y: 900, w: 220, h: 50 },
-    { x: 1300, y: 1000, w: 60, h: 60 },
-    { x: 1500, y: 1100, w: 40, h: 180 },
-    { x: 600, y: 1300, w: 250, h: 40 },
-    { x: 250, y: 900, w: 60, h: 60 },
-    { x: 350, y: 1100, w: 200, h: 30 },
-    { x: 1850, y: 800, w: 50, h: 50 },
-    { x: 2000, y: 1100, w: 250, h: 40 },
-    { x: 2100, y: 1300, w: 30, h: 200 },
-    { x: 1100, y: 1450, w: 300, h: 40 },
-    { x: 1700, y: 1500, w: 60, h: 60 },
-    { x: 400, y: 1500, w: 60, h: 60 },
-    { x: 800, y: 700, w: 30, h: 150 },
-  ];
-  for (const d of decor) walls.push(d);
-
-  // Phone booth at far side
-  phoneBooth = { x: WORLD_W - 200, y: WORLD_H - 250, w: 50, h: 80, used: false, charging: 0 };
-
-  // Weapon pickup roughly in middle
-  weaponPickup = { x: 1180, y: 820, picked: false };
-
-  // Player starts at apartment door
-  player = {
-    x: 480, y: 470,
-    r: 12,
-    speed: 130,
-    angle: 0,
-    hasWeapon: false,
-    ammo: 0,
-    sprintLeft: 2.0,
-    sprintMax: 2.0,
-    sprintRegen: 0.6,
-    hp: 3,
-    invuln: 0,
-    flashlight: { range: 280, cone: Math.PI / 5 }
-  };
-
-  // Demon spawns inside the apartment
-  demon = {
-    x: 380, y: 350,
-    r: 16,
-    speed: 95,
-    angle: 0,
-    stun: 0,
-    state: "stalk",
-    growlTimer: 2 + Math.random() * 3,
-  };
-}
-
-// Collision: move circle (player) against rectangles
-function moveCircle(ent, dx, dy) {
-  ent.x += dx;
-  for (const w of walls) {
-    if (circleRectOverlap(ent.x, ent.y, ent.r, w)) {
-      if (dx > 0) ent.x = w.x - ent.r;
-      else if (dx < 0) ent.x = w.x + w.w + ent.r;
+  const keys = {};
+  window.addEventListener('keydown', e => {
+    keys[e.key.toLowerCase()] = true;
+    if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) {
+      e.preventDefault();
     }
-  }
-  ent.y += dy;
-  for (const w of walls) {
-    if (circleRectOverlap(ent.x, ent.y, ent.r, w)) {
-      if (dy > 0) ent.y = w.y - ent.r;
-      else if (dy < 0) ent.y = w.y + w.h + ent.r;
-    }
-  }
-}
-function circleRectOverlap(cx, cy, cr, r) {
-  const nx = Math.max(r.x, Math.min(cx, r.x + r.w));
-  const ny = Math.max(r.y, Math.min(cy, r.y + r.h));
-  const dx = cx - nx, dy = cy - ny;
-  return dx * dx + dy * dy < cr * cr;
-}
-
-// Line-of-sight: does a line from (x1,y1) to (x2,y2) cross any wall?
-function losBlocked(x1, y1, x2, y2) {
-  for (const w of walls) {
-    if (lineRect(x1, y1, x2, y2, w)) return true;
-  }
-  return false;
-}
-function lineRect(x1, y1, x2, y2, r) {
-  return lineLine(x1, y1, x2, y2, r.x, r.y, r.x + r.w, r.y) ||
-         lineLine(x1, y1, x2, y2, r.x + r.w, r.y, r.x + r.w, r.y + r.h) ||
-         lineLine(x1, y1, x2, y2, r.x + r.w, r.y + r.h, r.x, r.y + r.h) ||
-         lineLine(x1, y1, x2, y2, r.x, r.y + r.h, r.x, r.y);
-}
-function lineLine(x1, y1, x2, y2, x3, y3, x4, y4) {
-  const d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-  if (Math.abs(d) < 1e-6) return false;
-  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / d;
-  const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / d;
-  return t >= 0 && t <= 1 && u >= 0 && u <= 1;
-}
-
-// --- Subtitle queue ---
-let subtitleTimer = 0;
-function say(text, ms = 3500) {
-  subtitleEl.textContent = text;
-  subtitleEl.classList.add("show");
-  subtitleTimer = ms / 1000;
-}
-
-// --- Bullets ---
-let bullets = [];
-function fireBullet() {
-  if (!player.hasWeapon || player.ammo <= 0) return;
-  if (player.fireCD > 0) return;
-  player.ammo--;
-  player.fireCD = 0.35;
-  const ang = player.angle;
-  bullets.push({
-    x: player.x + Math.cos(ang) * 14,
-    y: player.y + Math.sin(ang) * 14,
-    vx: Math.cos(ang) * 800,
-    vy: Math.sin(ang) * 800,
-    life: 0.7,
   });
-  gunshot();
-}
+  window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
-// --- Game state ---
-let state = "menu"; // menu, play, dead, win
-let policeTimer = 0; // counts up to 12s after call
-let calledPolice = false;
-let lastTime = 0;
-let cam = { x: 0, y: 0 };
-let screenShake = 0;
-let darkness = 1.0; // overall dark factor
-let demonHits = 0;
+  let best = parseFloat(localStorage.getItem('herbert_best') || '0');
+  bestEl.textContent = best.toFixed(1) + 's';
 
-function resetGame() {
-  buildWorld();
-  bullets = [];
-  state = "play";
-  calledPolice = false;
-  policeTimer = 0;
-  screenShake = 0;
-  demonHits = 0;
-  player.fireCD = 0;
-  say("Ich liefere nur noch diese eine Pizza ab... was ist das für ein Geruch?", 4500);
-}
+  const insults = [
+    "KOMM HER, DU LAUSEBENGEL!",
+    "DAS WAR MEIN BIER!",
+    "ZU MEINER ZEIT GAB'S DAFÜR HIEBE!",
+    "BLEIB STEHN, VERFLUCHT!",
+    "ICH HOL DICH NOCH!",
+    "RUNTER VON MEINEM RASEN!",
+    "DU KLEINER SCHURKE!",
+    "WART NUR, WENN ICH DICH KRIEGE!",
+    "PROST! *schwingt Flasche*",
+    "HEY! HEEEY! HIIIER!"
+  ];
 
-// --- Update ---
-function update(dt) {
-  if (state !== "play") return;
+  let state = 'menu';
+  let player, herbert, bottles, particles, hitFx;
+  let elapsed, shoutTimer, nextShout;
 
-  // Player movement
-  let mx = 0, my = 0;
-  if (keys["w"] || keys["arrowup"]) my -= 1;
-  if (keys["s"] || keys["arrowdown"]) my += 1;
-  if (keys["a"] || keys["arrowleft"]) mx -= 1;
-  if (keys["d"] || keys["arrowright"]) mx += 1;
-  const len = Math.hypot(mx, my);
-  if (len > 0) { mx /= len; my /= len; }
-
-  let speed = player.speed;
-  if (keys["shift"] && player.sprintLeft > 0 && len > 0) {
-    speed *= 1.7;
-    player.sprintLeft -= dt;
-    if (player.sprintLeft < 0) player.sprintLeft = 0;
-  } else {
-    player.sprintLeft = Math.min(player.sprintMax, player.sprintLeft + dt * player.sprintRegen);
+  function init() {
+    player = {
+      x: W / 2,
+      y: H / 2,
+      r: 14,
+      speed: 180,
+      sprintSpeed: 280,
+      stamina: 100,
+      maxStamina: 100,
+      lives: 3,
+      iframes: 0,
+      facing: 1,
+      bob: 0
+    };
+    herbert = {
+      x: 80,
+      y: 80,
+      r: 18,
+      speed: 110,
+      angerSpeed: 165,
+      anger: 0,
+      maxAnger: 100,
+      swingTimer: 0,
+      stunTimer: 0,
+      bob: 0,
+      facing: 1
+    };
+    bottles = [];
+    particles = [];
+    hitFx = 0;
+    elapsed = 0;
+    shoutTimer = 0;
+    nextShout = 2.5;
+    spawnBottles(3);
   }
 
-  moveCircle(player, mx * speed * dt, my * speed * dt);
-
-  // Aim
-  const worldMouseX = mouse.x + cam.x;
-  const worldMouseY = mouse.y + cam.y;
-  player.angle = Math.atan2(worldMouseY - player.y, worldMouseX - player.x);
-
-  // Fire
-  player.fireCD = Math.max(0, (player.fireCD || 0) - dt);
-  if (mouse.down) fireBullet();
-
-  // Weapon pickup
-  if (!weaponPickup.picked) {
-    const dx = player.x - weaponPickup.x, dy = player.y - weaponPickup.y;
-    if (dx * dx + dy * dy < 30 * 30) {
-      weaponPickup.picked = true;
-      player.hasWeapon = true;
-      player.ammo = 6;
-      say("Eine Pistole. Wem auch immer die gehört hat, danke. Sechs Schuss.", 4000);
-      beep(440, 0.1, "triangle", 0.2);
+  function spawnBottles(n) {
+    for (let i = 0; i < n; i++) {
+      const margin = 60;
+      let bx, by, tries = 0;
+      do {
+        bx = margin + Math.random() * (W - 2 * margin);
+        by = margin + Math.random() * (H - 2 * margin);
+        tries++;
+      } while (tries < 20 && (
+        Math.hypot(bx - player.x, by - player.y) < 120 ||
+        Math.hypot(bx - herbert.x, by - herbert.y) < 100
+      ));
+      bottles.push({ x: bx, y: by, r: 10, wobble: Math.random() * Math.PI * 2 });
     }
   }
 
-  // Phone booth interact
-  const pbCenter = { x: phoneBooth.x + phoneBooth.w / 2, y: phoneBooth.y + phoneBooth.h / 2 };
-  const pbDx = player.x - pbCenter.x, pbDy = player.y - pbCenter.y;
-  const nearPhone = pbDx * pbDx + pbDy * pbDy < 60 * 60;
-  if (nearPhone && !calledPolice) {
-    if (keys["e"]) {
-      phoneBooth.charging += dt;
-      if (phoneBooth.charging === 0) say("Halte E gedrückt...", 1500);
-      if (phoneBooth.charging > 2.5) {
-        calledPolice = true;
-        say("Hallo? Polizei? Bitte... bitte schnell! Hauptstraße 616!", 4500);
-        policeSiren(4);
-      }
+  function spawnParticles(x, y, color, count, speed=120) {
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = speed * (0.4 + Math.random() * 0.8);
+      particles.push({
+        x, y,
+        vx: Math.cos(a) * s,
+        vy: Math.sin(a) * s,
+        life: 0.5 + Math.random() * 0.4,
+        maxLife: 0.9,
+        color,
+        size: 2 + Math.random() * 3
+      });
+    }
+  }
+
+  function shout(text) {
+    shoutEl.textContent = text;
+    shoutEl.classList.add('show');
+    shoutTimer = 1.6;
+  }
+
+  function startGame() {
+    init();
+    state = 'playing';
+    overlay.classList.add('hidden');
+  }
+
+  function gameOver() {
+    state = 'over';
+    if (elapsed > best) {
+      best = elapsed;
+      localStorage.setItem('herbert_best', best.toString());
+    }
+    overlay.classList.remove('hidden');
+    overlay.querySelector('h1').textContent = 'HERBERT HAT DICH ERWISCHT!';
+    overlay.querySelector('h2').textContent = `Du hast ${elapsed.toFixed(1)}s überlebt.`;
+    overlay.querySelector('p').textContent = best === elapsed
+      ? 'NEUE BESTZEIT! Herbert ist trotzdem nicht beeindruckt.'
+      : `Bestzeit: ${best.toFixed(1)}s. Komm schon, du kannst besser!`;
+    startBtn.textContent = 'NOCHMAL!';
+  }
+
+  function update(dt) {
+    if (state !== 'playing') return;
+    elapsed += dt;
+
+    // Player movement
+    let dx = 0, dy = 0;
+    if (keys['w'] || keys['arrowup']) dy -= 1;
+    if (keys['s'] || keys['arrowdown']) dy += 1;
+    if (keys['a'] || keys['arrowleft']) { dx -= 1; player.facing = -1; }
+    if (keys['d'] || keys['arrowright']) { dx += 1; player.facing = 1; }
+    const len = Math.hypot(dx, dy);
+    const sprinting = keys['shift'] && player.stamina > 0 && len > 0;
+    const speed = sprinting ? player.sprintSpeed : player.speed;
+    if (len > 0) {
+      player.x += (dx / len) * speed * dt;
+      player.y += (dy / len) * speed * dt;
+      player.bob += dt * (sprinting ? 18 : 12);
+    }
+    if (sprinting) {
+      player.stamina = Math.max(0, player.stamina - 35 * dt);
     } else {
-      if (phoneBooth.charging > 0 && phoneBooth.charging < 2.5) {
-        say("Halte [E] zum Wählen. Polizei rufen.", 2000);
+      player.stamina = Math.min(player.maxStamina, player.stamina + 18 * dt);
+    }
+    player.x = Math.max(player.r, Math.min(W - player.r, player.x));
+    player.y = Math.max(player.r, Math.min(H - player.r, player.y));
+    if (player.iframes > 0) player.iframes -= dt;
+
+    // Herbert AI
+    if (herbert.stunTimer > 0) {
+      herbert.stunTimer -= dt;
+    } else {
+      const hdx = player.x - herbert.x;
+      const hdy = player.y - herbert.y;
+      const hlen = Math.hypot(hdx, hdy);
+      herbert.facing = hdx >= 0 ? 1 : -1;
+      // Anger ramps up over time
+      herbert.anger = Math.min(herbert.maxAnger, herbert.anger + dt * 2.5);
+      const angerMult = 1 + (herbert.anger / herbert.maxAnger) * 0.8;
+      const hspeed = herbert.angerSpeed * angerMult * (1 + Math.min(1, elapsed / 60) * 0.35);
+      if (hlen > 0.1) {
+        herbert.x += (hdx / hlen) * hspeed * dt;
+        herbert.y += (hdy / hlen) * hspeed * dt;
       }
-      phoneBooth.charging = Math.max(0, phoneBooth.charging - dt);
-    }
-  }
+      herbert.bob += dt * 10;
 
-  // After call, police take time to arrive
-  if (calledPolice) {
-    policeTimer += dt;
-    if (policeTimer > 12) {
-      state = "win";
-      showWin();
-    }
-  }
-
-  // Bullets update
-  for (const b of bullets) {
-    b.x += b.vx * dt;
-    b.y += b.vy * dt;
-    b.life -= dt;
-    for (const w of walls) {
-      if (pointInRect(b.x, b.y, w)) { b.life = 0; break; }
-    }
-    // hit demon?
-    const ddx = b.x - demon.x, ddy = b.y - demon.y;
-    if (ddx * ddx + ddy * ddy < demon.r * demon.r && demon.stun <= 0) {
-      b.life = 0;
-      demon.stun = 4.0; // big push-back
-      demonHits++;
-      // teleport demon further away to simulate retreat / vorsprung
-      const ang = Math.atan2(demon.y - player.y, demon.x - player.x);
-      demon.x += Math.cos(ang) * 300;
-      demon.y += Math.sin(ang) * 300;
-      // keep inside world
-      demon.x = Math.max(40, Math.min(WORLD_W - 40, demon.x));
-      demon.y = Math.max(40, Math.min(WORLD_H - 40, demon.y));
-      screenShake = 0.4;
-      demonGrowl();
-      say("Er weicht zurück! Lauf!", 2200);
-    }
-  }
-  bullets = bullets.filter(b => b.life > 0);
-
-  // Demon AI
-  if (demon.stun > 0) {
-    demon.stun -= dt;
-  } else {
-    // chase player; speeds up after police are called (final push)
-    let dspeed = demon.speed;
-    if (calledPolice) dspeed *= 1.35;
-    const dx = player.x - demon.x, dy = player.y - demon.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist > 1) {
-      // Crude pathing: try direct; if blocked, jitter angle slightly
-      let ang = Math.atan2(dy, dx);
-      let testX = demon.x + Math.cos(ang) * dspeed * dt;
-      let testY = demon.y + Math.sin(ang) * dspeed * dt;
-      let blocked = false;
-      for (const w of walls) {
-        if (circleRectOverlap(testX, testY, demon.r, w)) { blocked = true; break; }
-      }
-      if (blocked) {
-        const tryAngles = [ang + 0.6, ang - 0.6, ang + 1.2, ang - 1.2, ang + Math.PI / 2, ang - Math.PI / 2];
-        for (const a of tryAngles) {
-          const tx = demon.x + Math.cos(a) * dspeed * dt;
-          const ty = demon.y + Math.sin(a) * dspeed * dt;
-          let ok = true;
-          for (const w of walls) {
-            if (circleRectOverlap(tx, ty, demon.r, w)) { ok = false; break; }
-          }
-          if (ok) { ang = a; break; }
+      // Catch!
+      const reach = player.r + herbert.r + 6;
+      if (hlen < reach && player.iframes <= 0) {
+        player.lives--;
+        player.iframes = 1.6;
+        herbert.swingTimer = 0.35;
+        hitFx = 0.5;
+        spawnParticles(player.x, player.y, '#ffcc44', 14, 220);
+        spawnParticles(player.x, player.y, '#ff5544', 8, 180);
+        shout("AUA! DIE FLASCHE!");
+        // Knockback
+        if (hlen > 0.1) {
+          player.x -= (hdx / hlen) * 60;
+          player.y -= (hdy / hlen) * 60;
+          player.x = Math.max(player.r, Math.min(W - player.r, player.x));
+          player.y = Math.max(player.r, Math.min(H - player.r, player.y));
+        }
+        if (player.lives <= 0) {
+          gameOver();
+          return;
         }
       }
-      moveCircle(demon, Math.cos(ang) * dspeed * dt, Math.sin(ang) * dspeed * dt);
-      demon.angle = ang;
     }
-    demon.growlTimer -= dt;
-    if (demon.growlTimer <= 0) {
-      demonGrowl();
-      demon.growlTimer = 4 + Math.random() * 5;
+    if (herbert.swingTimer > 0) herbert.swingTimer -= dt;
+
+    // Bottles pickup
+    for (let i = bottles.length - 1; i >= 0; i--) {
+      const b = bottles[i];
+      b.wobble += dt * 4;
+      if (Math.hypot(b.x - player.x, b.y - player.y) < player.r + b.r) {
+        bottles.splice(i, 1);
+        herbert.stunTimer = 1.6;
+        herbert.anger = Math.max(0, herbert.anger - 30);
+        spawnParticles(b.x, b.y, '#88dd66', 12, 160);
+        shout("Mein Bier! MEEEIN BIIIER!");
+      }
     }
-  }
+    if (bottles.length < 2) spawnBottles(1);
 
-  // Demon hits player
-  if (player.invuln > 0) player.invuln -= dt;
-  const pdx = player.x - demon.x, pdy = player.y - demon.y;
-  if (pdx * pdx + pdy * pdy < (player.r + demon.r) * (player.r + demon.r) && player.invuln <= 0 && demon.stun <= 0) {
-    player.hp--;
-    player.invuln = 1.2;
-    screenShake = 0.5;
-    demonGrowl();
-    if (player.hp <= 0) {
-      state = "dead";
-      showDead();
-    } else {
-      say("Er hat mich erwischt! Ich blute!", 2500);
+    // Particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= 0.92;
+      p.vy *= 0.92;
+      p.life -= dt;
+      if (p.life <= 0) particles.splice(i, 1);
     }
+
+    if (hitFx > 0) hitFx -= dt;
+
+    // Shouts
+    nextShout -= dt;
+    if (nextShout <= 0) {
+      shout(insults[Math.floor(Math.random() * insults.length)]);
+      nextShout = 3.5 + Math.random() * 3;
+    }
+    if (shoutTimer > 0) {
+      shoutTimer -= dt;
+      if (shoutTimer <= 0) shoutEl.classList.remove('show');
+    }
+
+    // HUD
+    timeEl.textContent = elapsed.toFixed(1) + 's';
+    livesEl.textContent = '♥'.repeat(player.lives) + '♡'.repeat(Math.max(0, 3 - player.lives));
+    bestEl.textContent = Math.max(best, elapsed).toFixed(1) + 's';
   }
 
-  // Camera follow with shake
-  const targetCamX = player.x - W / 2;
-  const targetCamY = player.y - H / 2;
-  cam.x += (targetCamX - cam.x) * Math.min(1, dt * 8);
-  cam.y += (targetCamY - cam.y) * Math.min(1, dt * 8);
-  cam.x = Math.max(0, Math.min(WORLD_W - W, cam.x));
-  cam.y = Math.max(0, Math.min(WORLD_H - H, cam.y));
-  if (screenShake > 0) {
-    screenShake -= dt;
-    cam.x += (Math.random() - 0.5) * screenShake * 20;
-    cam.y += (Math.random() - 0.5) * screenShake * 20;
-  }
-
-  // Subtitle timer
-  if (subtitleTimer > 0) {
-    subtitleTimer -= dt;
-    if (subtitleTimer <= 0) subtitleEl.classList.remove("show");
-  }
-}
-
-// --- Render ---
-function render() {
-  ctx.clearRect(0, 0, W, H);
-
-  // Ground (parking lot tiles) — drawn in world space relative to camera
-  ctx.fillStyle = "#1a1a1a";
-  ctx.fillRect(0, 0, W, H);
-
-  ctx.save();
-  ctx.translate(-cam.x, -cam.y);
-
-  // Floor pattern
-  const startX = Math.floor(cam.x / TILE) * TILE;
-  const startY = Math.floor(cam.y / TILE) * TILE;
-  ctx.strokeStyle = "#222";
-  ctx.lineWidth = 1;
-  for (let x = startX; x < cam.x + W + TILE; x += TILE) {
-    ctx.beginPath();
-    ctx.moveTo(x, cam.y);
-    ctx.lineTo(x, cam.y + H);
-    ctx.stroke();
-  }
-  for (let y = startY; y < cam.y + H + TILE; y += TILE) {
-    ctx.beginPath();
-    ctx.moveTo(cam.x, y);
-    ctx.lineTo(cam.x + W, y);
-    ctx.stroke();
-  }
-
-  // Walls
-  for (const w of walls) {
-    ctx.fillStyle = "#3a3a3a";
-    ctx.fillRect(w.x, w.y, w.w, w.h);
-    ctx.strokeStyle = "#555";
-    ctx.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1);
-  }
-
-  // Weapon pickup
-  if (!weaponPickup.picked) {
-    ctx.save();
-    ctx.translate(weaponPickup.x, weaponPickup.y);
-    const pulse = 0.6 + 0.4 * Math.sin(performance.now() / 200);
-    ctx.fillStyle = `rgba(220,220,160,${pulse})`;
-    ctx.beginPath();
-    ctx.arc(0, 0, 14, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#222";
-    ctx.fillRect(-7, -2, 14, 5);
-    ctx.fillRect(-3, 2, 4, 6);
-    ctx.restore();
-  }
-
-  // Phone booth
-  ctx.fillStyle = calledPolice ? "#225522" : "#2a3a55";
-  ctx.fillRect(phoneBooth.x, phoneBooth.y, phoneBooth.w, phoneBooth.h);
-  ctx.strokeStyle = "#88aaff";
-  ctx.strokeRect(phoneBooth.x + 0.5, phoneBooth.y + 0.5, phoneBooth.w - 1, phoneBooth.h - 1);
-  ctx.fillStyle = "#88aaff";
-  ctx.fillRect(phoneBooth.x + 8, phoneBooth.y + 10, phoneBooth.w - 16, 20);
-  // Glow
-  if (!calledPolice) {
-    ctx.fillStyle = "rgba(120,160,255,0.15)";
-    ctx.beginPath();
-    ctx.arc(phoneBooth.x + phoneBooth.w / 2, phoneBooth.y + phoneBooth.h / 2, 70, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Bullets
-  for (const b of bullets) {
-    ctx.fillStyle = "#ffcc66";
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Demon (draw before darkness mask so flashlight reveals)
-  drawDemon();
-
-  // Player
-  drawPlayer();
-
-  // Police cars approaching after call
-  if (calledPolice) {
-    const t = Math.min(1, policeTimer / 12);
-    const carX = phoneBooth.x - 200 + t * 180;
-    const carY = phoneBooth.y - 60;
-    drawPoliceCar(carX, carY, t);
-    drawPoliceCar(carX - 100, carY + 40, t);
-  }
-
-  ctx.restore();
-
-  // Darkness overlay using "destination-out" trick: draw black, then cut out flashlight cone
-  drawDarkness();
-
-  // Hit flash
-  if (player.invuln > 0 && state === "play") {
-    ctx.fillStyle = `rgba(180,0,0,${player.invuln * 0.4})`;
+  function drawGrass() {
+    ctx.fillStyle = '#2a3520';
     ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#34431f';
+    for (let y = 0; y < H; y += 24) {
+      for (let x = 0; x < W; x += 24) {
+        if (((x + y) >> 3) % 3 === 0) ctx.fillRect(x, y, 12, 4);
+      }
+    }
+    ctx.fillStyle = '#1f2918';
+    for (let i = 0; i < 30; i++) {
+      const x = (i * 137) % W;
+      const y = (i * 211) % H;
+      ctx.fillRect(x, y, 3, 6);
+      ctx.fillRect(x + 4, y + 2, 3, 5);
+    }
+    // Border fence
+    ctx.fillStyle = '#5c4326';
+    ctx.fillRect(0, 0, W, 8);
+    ctx.fillRect(0, H - 8, W, 8);
+    ctx.fillRect(0, 0, 8, H);
+    ctx.fillRect(W - 8, 0, 8, H);
   }
 
-  updateHud();
-}
+  function drawPlayer() {
+    const x = Math.round(player.x);
+    const y = Math.round(player.y);
+    const bob = Math.sin(player.bob) * 2;
+    if (player.iframes > 0 && Math.floor(player.iframes * 12) % 2 === 0) return;
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 14, 12, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Legs
+    ctx.fillStyle = '#3355aa';
+    ctx.fillRect(x - 6, y + 6 + bob, 4, 10);
+    ctx.fillRect(x + 2, y + 6 - bob, 4, 10);
+    // Body
+    ctx.fillStyle = '#dd2222';
+    ctx.fillRect(x - 8, y - 6 + bob * 0.3, 16, 14);
+    // Arms
+    ctx.fillStyle = '#ffccaa';
+    ctx.fillRect(x - 10, y - 4 + bob * 0.5, 3, 10);
+    ctx.fillRect(x + 7, y - 4 - bob * 0.5, 3, 10);
+    // Head
+    ctx.fillStyle = '#ffccaa';
+    ctx.fillRect(x - 6, y - 16 + bob * 0.3, 12, 10);
+    // Hair
+    ctx.fillStyle = '#3a2410';
+    ctx.fillRect(x - 6, y - 16 + bob * 0.3, 12, 3);
+    // Eyes
+    ctx.fillStyle = '#000';
+    if (player.facing > 0) {
+      ctx.fillRect(x + 1, y - 12 + bob * 0.3, 2, 2);
+      ctx.fillRect(x - 3, y - 12 + bob * 0.3, 2, 2);
+    } else {
+      ctx.fillRect(x - 4, y - 12 + bob * 0.3, 2, 2);
+      ctx.fillRect(x, y - 12 + bob * 0.3, 2, 2);
+    }
+    // Scared mouth
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x - 2, y - 8 + bob * 0.3, 4, 2);
+  }
 
-function drawPlayer() {
-  ctx.save();
-  ctx.translate(player.x, player.y);
-  // Pizza box behind back when no weapon
-  if (!player.hasWeapon) {
+  function drawHerbert() {
+    const x = Math.round(herbert.x);
+    const y = Math.round(herbert.y);
+    const stunned = herbert.stunTimer > 0;
+    const bob = stunned ? 0 : Math.sin(herbert.bob) * 2;
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 18, 14, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Legs (brown pants)
+    ctx.fillStyle = '#4a3320';
+    ctx.fillRect(x - 7, y + 8 + bob, 5, 12);
+    ctx.fillRect(x + 2, y + 8 - bob, 5, 12);
+    // Body - dirty undershirt
+    ctx.fillStyle = '#cfc4a0';
+    ctx.fillRect(x - 10, y - 4 + bob * 0.3, 20, 16);
+    // Suspenders
+    ctx.fillStyle = '#3a2410';
+    ctx.fillRect(x - 7, y - 4 + bob * 0.3, 2, 16);
+    ctx.fillRect(x + 5, y - 4 + bob * 0.3, 2, 16);
+    // Belly bulge
+    ctx.fillStyle = '#bdb090';
+    ctx.fillRect(x - 8, y + 4 + bob * 0.3, 16, 6);
+    // Head - bald with patches
+    ctx.fillStyle = '#e8b890';
+    ctx.fillRect(x - 8, y - 18 + bob * 0.3, 16, 14);
+    // Side hair (gray, wild)
+    ctx.fillStyle = '#d8d8d8';
+    ctx.fillRect(x - 10, y - 12 + bob * 0.3, 3, 8);
+    ctx.fillRect(x + 7, y - 12 + bob * 0.3, 3, 8);
+    ctx.fillRect(x - 9, y - 14 + bob * 0.3, 2, 4);
+    ctx.fillRect(x + 7, y - 14 + bob * 0.3, 2, 4);
+    // Bushy eyebrows
+    ctx.fillStyle = '#d8d8d8';
+    ctx.fillRect(x - 6, y - 14 + bob * 0.3, 4, 2);
+    ctx.fillRect(x + 2, y - 14 + bob * 0.3, 4, 2);
+    // Angry eyes (red if not stunned)
+    ctx.fillStyle = stunned ? '#000' : '#ff2222';
+    if (stunned) {
+      // X eyes
+      ctx.fillRect(x - 5, y - 11 + bob * 0.3, 4, 1);
+      ctx.fillRect(x - 4, y - 12 + bob * 0.3, 1, 1);
+      ctx.fillRect(x - 2, y - 10 + bob * 0.3, 1, 1);
+      ctx.fillRect(x + 1, y - 11 + bob * 0.3, 4, 1);
+      ctx.fillRect(x + 2, y - 12 + bob * 0.3, 1, 1);
+      ctx.fillRect(x + 4, y - 10 + bob * 0.3, 1, 1);
+    } else {
+      ctx.fillRect(x - 4, y - 11 + bob * 0.3, 3, 2);
+      ctx.fillRect(x + 2, y - 11 + bob * 0.3, 3, 2);
+    }
+    // Mouth - shouting
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x - 3, y - 7 + bob * 0.3, 6, 3);
+    ctx.fillStyle = '#882222';
+    ctx.fillRect(x - 2, y - 6 + bob * 0.3, 4, 1);
+    // Stubble
+    ctx.fillStyle = '#999';
+    for (let i = 0; i < 4; i++) ctx.fillRect(x - 6 + i * 3, y - 4 + bob * 0.3, 1, 1);
+
+    // Beer bottle arm
+    const swinging = herbert.swingTimer > 0;
+    const swingPhase = 1 - herbert.swingTimer / 0.35;
+    const armSide = herbert.facing;
+    const baseAngle = swinging ? Math.PI * 0.6 * (1 - swingPhase) - Math.PI * 0.3 : Math.sin(herbert.bob * 0.5) * 0.2;
+    const armX = x + armSide * 8;
+    const armY = y - 2 + bob * 0.3;
+    const armLen = 14;
+    const handX = armX + Math.cos(baseAngle) * armLen * armSide;
+    const handY = armY + Math.sin(baseAngle) * armLen;
+    // Arm
+    ctx.strokeStyle = '#e8b890';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(armX, armY);
+    ctx.lineTo(handX, handY);
+    ctx.stroke();
+    // Beer bottle in hand
+    drawBeerBottle(handX, handY, baseAngle + Math.PI / 2);
+
+    // Anger lines if very angry
+    if (!stunned && herbert.anger > 60) {
+      ctx.strokeStyle = '#ff3322';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) {
+        const ax = x - 14 + i * 14;
+        const ay = y - 24 + Math.sin(elapsed * 10 + i) * 2;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(ax + 4, ay - 6);
+        ctx.lineTo(ax + 8, ay);
+        ctx.stroke();
+      }
+    }
+    // Z's if stunned
+    if (stunned) {
+      ctx.fillStyle = '#88ccff';
+      ctx.font = 'bold 16px Courier New';
+      const t = Math.sin(elapsed * 5) * 3;
+      ctx.fillText('Z', x + 10, y - 22 + t);
+      ctx.font = 'bold 12px Courier New';
+      ctx.fillText('z', x + 18, y - 28 - t);
+    }
+  }
+
+  function drawBeerBottle(cx, cy, angle) {
     ctx.save();
-    ctx.rotate(player.angle + Math.PI);
-    ctx.fillStyle = "#cc8844";
-    ctx.fillRect(-10, -10, 20, 20);
-    ctx.strokeStyle = "#553311";
-    ctx.strokeRect(-10, -10, 20, 20);
-    ctx.fillStyle = "#553311";
-    ctx.fillRect(-8, -1, 16, 2);
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    // Bottle body (green)
+    ctx.fillStyle = '#2a6b1f';
+    ctx.fillRect(-4, -2, 8, 14);
+    // Neck
+    ctx.fillRect(-2, -8, 4, 6);
+    // Highlight
+    ctx.fillStyle = '#4aa030';
+    ctx.fillRect(-3, -1, 1, 12);
+    // Label
+    ctx.fillStyle = '#f0e6c0';
+    ctx.fillRect(-3, 3, 6, 5);
+    ctx.fillStyle = '#aa2222';
+    ctx.fillRect(-3, 4, 6, 1);
+    // Cap
+    ctx.fillStyle = '#aaa';
+    ctx.fillRect(-2, -9, 4, 2);
     ctx.restore();
   }
-  ctx.rotate(player.angle);
-  // body
-  ctx.fillStyle = player.invuln > 0 && Math.floor(player.invuln * 10) % 2 ? "#990000" : "#cc2222";
-  ctx.beginPath();
-  ctx.arc(0, 0, player.r, 0, Math.PI * 2);
-  ctx.fill();
-  // cap
-  ctx.fillStyle = "#222";
-  ctx.fillRect(-6, -player.r - 2, 12, 4);
-  // arms / weapon
-  if (player.hasWeapon) {
-    ctx.fillStyle = "#222";
-    ctx.fillRect(8, -2, 12, 4);
-  } else {
-    ctx.fillStyle = "#cc2222";
-    ctx.fillRect(6, -3, 8, 6);
+
+  function drawBottlePickup(b) {
+    const wob = Math.sin(b.wobble) * 2;
+    ctx.save();
+    ctx.translate(b.x, b.y + wob);
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(0, 10 - wob, 7, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Glow
+    ctx.fillStyle = 'rgba(255, 220, 100, 0.15)';
+    ctx.beginPath();
+    ctx.arc(0, 0, 16, 0, Math.PI * 2);
+    ctx.fill();
+    drawBeerBottle(0, 0, 0);
+    ctx.restore();
   }
-  ctx.restore();
-}
 
-function drawDemon() {
-  ctx.save();
-  ctx.translate(demon.x, demon.y);
-  // shadow aura
-  const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 40);
-  grad.addColorStop(0, "rgba(120,0,0,0.5)");
-  grad.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(0, 0, 40, 0, Math.PI * 2);
-  ctx.fill();
-  // body
-  ctx.fillStyle = demon.stun > 0 ? "#552222" : "#220000";
-  ctx.beginPath();
-  ctx.arc(0, 0, demon.r, 0, Math.PI * 2);
-  ctx.fill();
-  // horns
-  ctx.fillStyle = "#111";
-  ctx.beginPath();
-  ctx.moveTo(-8, -demon.r);
-  ctx.lineTo(-12, -demon.r - 10);
-  ctx.lineTo(-4, -demon.r - 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(8, -demon.r);
-  ctx.lineTo(12, -demon.r - 10);
-  ctx.lineTo(4, -demon.r - 2);
-  ctx.fill();
-  // eyes
-  const eyePulse = 0.7 + 0.3 * Math.sin(performance.now() / 120);
-  ctx.fillStyle = `rgba(255,${demon.stun > 0 ? 100 : 30},0,${eyePulse})`;
-  ctx.beginPath();
-  ctx.arc(-5, -2, 3, 0, Math.PI * 2);
-  ctx.arc(5, -2, 3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawPoliceCar(x, y, t) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.fillStyle = "#1a1a55";
-  ctx.fillRect(-25, -12, 50, 24);
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(-25, -2, 50, 4);
-  // flashing lights
-  const phase = Math.floor(performance.now() / 200) % 2;
-  ctx.fillStyle = phase ? "#ff3030" : "#3030ff";
-  ctx.fillRect(-8, -14, 16, 4);
-  // headlight cone
-  ctx.fillStyle = "rgba(255,255,200,0.15)";
-  ctx.beginPath();
-  ctx.moveTo(25, 0);
-  ctx.lineTo(150, -40);
-  ctx.lineTo(150, 40);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawDarkness() {
-  // Build the dark layer with the flashlight cone cut out.
-  const dctx = ctx;
-  // Off-screen composite onto a separate canvas? Simpler: draw black, then use destination-out with the cone.
-  dctx.save();
-  dctx.fillStyle = "rgba(0,0,0,0.92)";
-  dctx.fillRect(0, 0, W, H);
-  // Cut out flashlight cone using destination-out
-  dctx.globalCompositeOperation = "destination-out";
-  const sx = player.x - cam.x;
-  const sy = player.y - cam.y;
-  const range = player.flashlight.range;
-  const cone = player.flashlight.cone;
-  // Use a radial gradient for soft falloff
-  const fg = dctx.createRadialGradient(sx, sy, 10, sx, sy, range);
-  fg.addColorStop(0, "rgba(0,0,0,1)");
-  fg.addColorStop(0.5, "rgba(0,0,0,0.85)");
-  fg.addColorStop(1, "rgba(0,0,0,0)");
-  dctx.fillStyle = fg;
-  dctx.beginPath();
-  dctx.moveTo(sx, sy);
-  dctx.arc(sx, sy, range, player.angle - cone, player.angle + cone);
-  dctx.closePath();
-  dctx.fill();
-
-  // small ambient circle around player
-  const ag = dctx.createRadialGradient(sx, sy, 0, sx, sy, 60);
-  ag.addColorStop(0, "rgba(0,0,0,0.9)");
-  ag.addColorStop(1, "rgba(0,0,0,0)");
-  dctx.fillStyle = ag;
-  dctx.beginPath();
-  dctx.arc(sx, sy, 60, 0, Math.PI * 2);
-  dctx.fill();
-
-  dctx.globalCompositeOperation = "source-over";
-
-  // Faint flashlight beam tint
-  dctx.save();
-  dctx.globalCompositeOperation = "lighter";
-  const beam = dctx.createRadialGradient(sx, sy, 10, sx, sy, range);
-  beam.addColorStop(0, "rgba(255,240,180,0.18)");
-  beam.addColorStop(1, "rgba(255,240,180,0)");
-  dctx.fillStyle = beam;
-  dctx.beginPath();
-  dctx.moveTo(sx, sy);
-  dctx.arc(sx, sy, range, player.angle - cone, player.angle + cone);
-  dctx.closePath();
-  dctx.fill();
-  dctx.restore();
-
-  dctx.restore();
-}
-
-function updateHud() {
-  const ammoText = player.hasWeapon ? `Munition: ${player.ammo}/6` : "Keine Waffe";
-  const hpDots = "♥".repeat(player.hp) + "·".repeat(Math.max(0, 3 - player.hp));
-  let phoneLine = "";
-  if (calledPolice) {
-    const eta = Math.max(0, 12 - policeTimer).toFixed(1);
-    phoneLine = `<span style="color:#88aaff">Polizei unterwegs — ETA ${eta}s</span>`;
-  } else {
-    const distToPhone = Math.hypot(player.x - (phoneBooth.x + 25), player.y - (phoneBooth.y + 40));
-    phoneLine = `Telefonzelle: ${Math.round(distToPhone)}m`;
+  function drawParticles() {
+    for (const p of particles) {
+      const a = Math.max(0, p.life / p.maxLife);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
   }
-  const sprint = Math.round((player.sprintLeft / player.sprintMax) * 100);
-  hud.innerHTML = `
-    <div style="color:#cc2222">${hpDots}</div>
-    <div>${ammoText}</div>
-    <div>Sprint: ${sprint}%</div>
-    <div>${phoneLine}</div>
-  `;
-}
 
-// --- End screens ---
-function showDead() {
-  overlay.innerHTML = `
-    <h1 style="color:#660000">TOT</h1>
-    <h2>Bestellung wurde abgeschlossen.</h2>
-    <p>Der Dämon hat seine Lieferung erhalten.<br>Du.</p>
-    <button id="restartBtn">NOCH EINMAL</button>
-  `;
-  overlay.classList.remove("hidden");
-  document.getElementById("restartBtn").addEventListener("click", () => {
-    overlay.classList.add("hidden");
-    resetGame();
-  });
-}
-function showWin() {
-  overlay.innerHTML = `
-    <h1 style="color:#88aaff">GERETTET</h1>
-    <h2>Die Polizei ist da.</h2>
-    <p>Die Sirenen schneiden durch die Nacht.<br>
-    Du wirfst einen letzten Blick zurück — die Tür steht offen,<br>
-    die Pizza liegt unangetastet auf der Schwelle.<br>
-    Niemand bestellt um drei Uhr morgens, ohne einen Grund.</p>
-    <button id="restartBtn">NEUE SCHICHT</button>
-  `;
-  overlay.classList.remove("hidden");
-  document.getElementById("restartBtn").addEventListener("click", () => {
-    overlay.classList.add("hidden");
-    resetGame();
-  });
-}
+  function drawStaminaBar() {
+    const w = 120, h = 8;
+    const x = player.x - w / 2;
+    const y = player.y + 24;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
+    ctx.fillStyle = '#553322';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = player.stamina < 25 ? '#ff5544' : '#ffcc44';
+    ctx.fillRect(x, y, w * (player.stamina / player.maxStamina), h);
+  }
 
-// --- Loop ---
-function loop(ts) {
-  const dt = Math.min(0.05, (ts - lastTime) / 1000 || 0);
-  lastTime = ts;
-  if (state === "play") update(dt);
+  function drawHitFlash() {
+    if (hitFx > 0) {
+      ctx.fillStyle = `rgba(255,80,60,${hitFx * 0.4})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  function render() {
+    drawGrass();
+    for (const b of bottles) drawBottlePickup(b);
+    drawParticles();
+    // Draw in y-order
+    const entities = [
+      { y: player.y, draw: drawPlayer },
+      { y: herbert.y, draw: drawHerbert }
+    ];
+    entities.sort((a, b) => a.y - b.y);
+    for (const e of entities) e.draw();
+    drawStaminaBar();
+    drawHitFlash();
+  }
+
+  let last = performance.now();
+  function loop(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  startBtn.addEventListener('click', startGame);
+  init();
   render();
   requestAnimationFrame(loop);
-}
-
-// Resize canvas to fit window while keeping aspect
-function fit() {
-  const ratio = W / H;
-  const ww = window.innerWidth;
-  const wh = window.innerHeight;
-  let cw = ww, ch = ww / ratio;
-  if (ch > wh) { ch = wh; cw = wh * ratio; }
-  canvas.style.width = cw + "px";
-  canvas.style.height = ch + "px";
-}
-window.addEventListener("resize", fit);
-fit();
-
-startBtn.addEventListener("click", () => {
-  ensureAudio();
-  overlay.classList.add("hidden");
-  resetGame();
-});
-
-// Initial build so the title screen has a backdrop too
-buildWorld();
-requestAnimationFrame(loop);
+})();
 </script>
 </body>
 </html>
