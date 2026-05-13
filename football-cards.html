@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<title>Fussball Karten Manager</title>
+<style>
+  :root {
+    --bg: #0a1f0a;
+    --bg2: #052905;
+    --accent: #ffd700;
+    --green: #2d8f2d;
+    --dark: #061206;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 20% 10%, #0e4a0e 0%, transparent 60%),
+      radial-gradient(circle at 80% 90%, #073007 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+    color: #f0f0f0;
+    font-family: "Segoe UI", system-ui, sans-serif;
+  }
+  header {
+    padding: 20px;
+    text-align: center;
+    border-bottom: 3px solid var(--accent);
+    background: rgba(0,0,0,0.4);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: blur(6px);
+  }
+  header h1 {
+    margin: 0;
+    font-size: 28px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-shadow: 0 0 12px rgba(255,215,0,0.4);
+  }
+  .hud {
+    margin-top: 8px;
+    font-size: 18px;
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .hud span b { color: var(--accent); }
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .tab {
+    padding: 10px 22px;
+    background: rgba(0,0,0,0.5);
+    border: 2px solid #444;
+    color: #ccc;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 16px;
+    transition: all 0.2s;
+  }
+  .tab:hover { border-color: var(--accent); color: #fff; }
+  .tab.active {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+    font-weight: bold;
+  }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .shop {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+  }
+  .pack {
+    background: linear-gradient(160deg, #1a3a1a, #0a1f0a);
+    border: 2px solid var(--green);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+  }
+  .pack:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6), 0 0 20px rgba(255,215,0,0.2);
+  }
+  .pack h3 { margin: 0 0 8px; color: var(--accent); }
+  .pack .price {
+    font-size: 22px;
+    margin: 10px 0;
+    color: #fff;
+  }
+  .pack .desc { font-size: 13px; color: #aaa; min-height: 36px; }
+  .pack button {
+    margin-top: 12px;
+    padding: 10px 18px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 15px;
+  }
+  .pack button:disabled {
+    background: #555;
+    color: #999;
+    cursor: not-allowed;
+  }
+
+  .collection {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: linear-gradient(160deg, #222, #111);
+    border: 2px solid #444;
+    border-radius: 10px;
+    padding: 12px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s;
+  }
+  .card:hover { transform: scale(1.03); }
+  .card.common  { border-color: #888; }
+  .card.rare    { border-color: #3aa0ff; box-shadow: 0 0 12px rgba(58,160,255,0.3); }
+  .card.epic    { border-color: #c14dff; box-shadow: 0 0 14px rgba(193,77,255,0.4); }
+  .card.legend  {
+    border-color: var(--accent);
+    box-shadow: 0 0 18px rgba(255,215,0,0.55);
+    background: linear-gradient(160deg, #3a2e0c, #1a1305);
+  }
+  .card .badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    font-size: 10px;
+    background: rgba(0,0,0,0.6);
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .card .badge.common  { color: #ccc; }
+  .card .badge.rare    { color: #3aa0ff; }
+  .card .badge.epic    { color: #c14dff; }
+  .card .badge.legend  { color: var(--accent); }
+  .card h4 { margin: 4px 0; font-size: 16px; }
+  .card .pos { font-size: 12px; color: #aaa; }
+  .card .club { font-size: 12px; color: #ddd; font-style: italic; }
+  .card .ovr {
+    font-size: 26px;
+    font-weight: bold;
+    text-align: center;
+    margin: 4px 0 0;
+    color: var(--accent);
+  }
+  .card .portrait {
+    width: 100%;
+    height: 130px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    display: block;
+    background: #000;
+  }
+  .card .count {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: var(--accent);
+    color: #000;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 10px;
+  }
+  .card .sell {
+    width: 100%;
+    margin-top: 6px;
+    padding: 4px;
+    background: #333;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .card .sell:hover { background: #555; }
+
+  /* Pack opening overlay */
+  #opener {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 100;
+    padding: 20px;
+  }
+  #opener.show { display: flex; }
+  #opener .drawn {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 900px;
+  }
+  #opener .card {
+    width: 180px;
+    opacity: 0;
+    transform: translateY(40px) scale(0.8);
+    animation: reveal 0.5s forwards;
+  }
+  @keyframes reveal {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  #opener button {
+    margin-top: 24px;
+    padding: 12px 28px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  #opener h2 {
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 40px;
+    color: #888;
+    font-style: italic;
+  }
+  .filters {
+    margin-bottom: 16px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .filters button {
+    padding: 6px 14px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid #555;
+    color: #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .filters button.active {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+  }
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.9);
+    border: 2px solid var(--accent);
+    padding: 14px 24px;
+    border-radius: 8px;
+    color: var(--accent);
+    font-weight: bold;
+    z-index: 200;
+    opacity: 0;
+    transition: opacity 0.3s;
+    max-width: 90%;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>FUSSBALL KARTEN MANAGER</h1>
+  <div class="hud">
+    <span>Münzen: <b id="coins">0</b></span>
+    <span>Karten: <b id="totalCards">0</b></span>
+    <span>Sammlung: <b id="uniqueCards">0</b>/<b id="totalPool">0</b></span>
+  </div>
+  <div style="margin-top:10px;">
+    <button id="roastBtn" style="padding:6px 14px; background:#832; color:#fff; border:1px solid #c44; border-radius:6px; cursor:pointer; font-size:13px;">Trainer beleidigt mich!</button>
+  </div>
+</header>
+
+<main>
+  <div class="tabs">
+    <button class="tab active" data-tab="shop">Shop</button>
+    <button class="tab" data-tab="collection">Sammlung</button>
+    <button class="tab" data-tab="info">Info</button>
+  </div>
+
+  <section id="shop" class="panel active">
+    <div class="shop" id="shopGrid"></div>
+  </section>
+
+  <section id="collection" class="panel">
+    <div class="filters">
+      <button class="active" data-filter="all">Alle</button>
+      <button data-filter="common">Common</button>
+      <button data-filter="rare">Rare</button>
+      <button data-filter="epic">Epic</button>
+      <button data-filter="legend">Legend</button>
+    </div>
+    <div class="collection" id="collectionGrid"></div>
+  </section>
+
+  <section id="info" class="panel">
+    <div style="max-width: 700px; margin: 0 auto; line-height: 1.7; background: rgba(0,0,0,0.4); padding: 24px; border-radius: 10px; border: 1px solid #333;">
+      <h2 style="color: var(--accent); margin-top: 0;">So spielst du</h2>
+      <p>Du startest mit <b>500 Münzen</b>. Kaufe Päckchen im Shop und ziehe Spielerkarten unterschiedlicher Seltenheit.</p>
+      <ul>
+        <li><span style="color:#ccc">Common</span> - normaler Spieler (OVR 60-74)</li>
+        <li><span style="color:#3aa0ff">Rare</span> - guter Spieler (OVR 75-83)</li>
+        <li><span style="color:#c14dff">Epic</span> - Star (OVR 84-89)</li>
+        <li><span style="color:var(--accent)">Legend</span> - Weltklasse (OVR 90-99)</li>
+      </ul>
+      <p>Duplikate kannst du in deiner Sammlung wieder verkaufen, um neue Päckchen zu kaufen.</p>
+      <p>Dein Fortschritt wird automatisch im Browser gespeichert.</p>
+      <button id="resetBtn" style="padding: 8px 16px; background: #832; color: #fff; border: none; border-radius: 6px; cursor: pointer;">Spielstand zurücksetzen</button>
+    </div>
+  </section>
+</main>
+
+<div id="opener">
+  <h2 id="openerTitle">Päckchen öffnen...</h2>
+  <div class="drawn" id="drawn"></div>
+  <button id="closeOpener">Weiter</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== Spielerpool =====
+const PLAYERS = [
+  // Legends (OVR 90+)
+  { name: "Lionel Messi",      pos: "RW", club: "Inter Miami",      ovr: 93, rarity: "legend" },
+  { name: "Cristiano Ronaldo", pos: "ST", club: "Al-Nassr",         ovr: 91, rarity: "legend" },
+  { name: "Kylian Mbappé",     pos: "ST", club: "Real Madrid",      ovr: 92, rarity: "legend" },
+  { name: "Erling Haaland",    pos: "ST", club: "Man City",         ovr: 92, rarity: "legend" },
+  { name: "Kevin De Bruyne",   pos: "CM", club: "Man City",         ovr: 90, rarity: "legend" },
+  { name: "Vinicius Jr.",      pos: "LW", club: "Real Madrid",      ovr: 90, rarity: "legend" },
+  { name: "Jude Bellingham",   pos: "CAM",club: "Real Madrid",      ovr: 91, rarity: "legend" },
+
+  // Epic (OVR 84-89)
+  { name: "Robert Lewandowski",pos: "ST", club: "Barcelona",        ovr: 89, rarity: "epic" },
+  { name: "Mohamed Salah",     pos: "RW", club: "Liverpool",        ovr: 89, rarity: "epic" },
+  { name: "Harry Kane",        pos: "ST", club: "Bayern München",   ovr: 89, rarity: "epic" },
+  { name: "Rodri",             pos: "CDM",club: "Man City",         ovr: 88, rarity: "epic" },
+  { name: "Bukayo Saka",       pos: "RW", club: "Arsenal",          ovr: 87, rarity: "epic" },
+  { name: "Phil Foden",        pos: "CM", club: "Man City",         ovr: 87, rarity: "epic" },
+  { name: "Jamal Musiala",     pos: "CAM",club: "Bayern München",   ovr: 87, rarity: "epic" },
+  { name: "Florian Wirtz",     pos: "CAM",club: "Bayer Leverkusen", ovr: 86, rarity: "epic" },
+  { name: "Pedri",             pos: "CM", club: "Barcelona",        ovr: 86, rarity: "epic" },
+  { name: "Lautaro Martinez",  pos: "ST", club: "Inter Milan",      ovr: 86, rarity: "epic" },
+  { name: "Thibaut Courtois",  pos: "GK", club: "Real Madrid",      ovr: 88, rarity: "epic" },
+  { name: "Alisson Becker",    pos: "GK", club: "Liverpool",        ovr: 88, rarity: "epic" },
+
+  // Rare (OVR 75-83)
+  { name: "Joshua Kimmich",    pos: "CM", club: "Bayern München",   ovr: 83, rarity: "rare" },
+  { name: "Leroy Sané",        pos: "RW", club: "Bayern München",   ovr: 82, rarity: "rare" },
+  { name: "Manuel Neuer",      pos: "GK", club: "Bayern München",   ovr: 83, rarity: "rare" },
+  { name: "Toni Kroos",        pos: "CM", club: "Real Madrid",      ovr: 83, rarity: "rare" },
+  { name: "Antoine Griezmann", pos: "CF", club: "Atletico Madrid",  ovr: 83, rarity: "rare" },
+  { name: "Marc-André ter Stegen", pos: "GK", club: "Barcelona",    ovr: 83, rarity: "rare" },
+  { name: "Bruno Fernandes",   pos: "CAM",club: "Man United",       ovr: 82, rarity: "rare" },
+  { name: "Marquinhos",        pos: "CB", club: "PSG",              ovr: 82, rarity: "rare" },
+  { name: "Federico Valverde", pos: "CM", club: "Real Madrid",      ovr: 82, rarity: "rare" },
+  { name: "Niclas Füllkrug",   pos: "ST", club: "Dortmund",         ovr: 79, rarity: "rare" },
+  { name: "Granit Xhaka",      pos: "CM", club: "Bayer Leverkusen", ovr: 81, rarity: "rare" },
+  { name: "Christian Pulisic", pos: "RW", club: "AC Milan",         ovr: 80, rarity: "rare" },
+  { name: "Serge Gnabry",      pos: "RW", club: "Bayern München",   ovr: 81, rarity: "rare" },
+  { name: "Dayot Upamecano",   pos: "CB", club: "Bayern München",   ovr: 80, rarity: "rare" },
+  { name: "Marco Reus",        pos: "CAM",club: "LA Galaxy",        ovr: 79, rarity: "rare" },
+
+  // Common (OVR 60-74)
+  { name: "Mats Hummels",      pos: "CB", club: "AS Roma",          ovr: 74, rarity: "common" },
+  { name: "Thomas Müller",     pos: "CAM",club: "Bayern München",   ovr: 74, rarity: "common" },
+  { name: "Karim Adeyemi",     pos: "LW", club: "Dortmund",         ovr: 73, rarity: "common" },
+  { name: "Youssoufa Moukoko", pos: "ST", club: "Nizza",            ovr: 71, rarity: "common" },
+  { name: "Florian Neuhaus",   pos: "CM", club: "Mönchengladbach",  ovr: 72, rarity: "common" },
+  { name: "Lukas Nmecha",      pos: "ST", club: "Wolfsburg",        ovr: 72, rarity: "common" },
+  { name: "Maximilian Beier",  pos: "ST", club: "Dortmund",         ovr: 74, rarity: "common" },
+  { name: "Robin Koch",        pos: "CB", club: "Frankfurt",        ovr: 73, rarity: "common" },
+  { name: "Pascal Groß",       pos: "CM", club: "Dortmund",         ovr: 74, rarity: "common" },
+  { name: "Deniz Undav",       pos: "ST", club: "Stuttgart",        ovr: 73, rarity: "common" },
+  { name: "Chris Führich",     pos: "LW", club: "Stuttgart",        ovr: 72, rarity: "common" },
+  { name: "Felix Nmecha",      pos: "CM", club: "Dortmund",         ovr: 71, rarity: "common" },
+  { name: "Kevin Trapp",       pos: "GK", club: "Frankfurt",        ovr: 74, rarity: "common" },
+  { name: "Aleksandar Pavlovic",pos:"CDM",club: "Bayern München",   ovr: 72, rarity: "common" },
+  { name: "Brajan Gruda",      pos: "RW", club: "Brighton",         ovr: 70, rarity: "common" },
+  { name: "Ridle Baku",        pos: "RB", club: "Wolfsburg",        ovr: 70, rarity: "common" },
+  { name: "Tim Kleindienst",   pos: "ST", club: "Mönchengladbach",  ovr: 71, rarity: "common" },
+];
+
+const PACKS = [
+  {
+    id: "bronze",
+    name: "Bronze Päckchen",
+    price: 100,
+    cards: 3,
+    desc: "3 Karten. Garantiert mind. 1 Common.",
+    odds: { common: 0.78, rare: 0.20, epic: 0.02, legend: 0 }
+  },
+  {
+    id: "silver",
+    name: "Silber Päckchen",
+    price: 300,
+    cards: 4,
+    desc: "4 Karten. Höhere Chance auf Rare.",
+    odds: { common: 0.50, rare: 0.40, epic: 0.09, legend: 0.01 }
+  },
+  {
+    id: "gold",
+    name: "Gold Päckchen",
+    price: 800,
+    cards: 5,
+    desc: "5 Karten. Garantiert mind. 1 Rare.",
+    odds: { common: 0.30, rare: 0.50, epic: 0.17, legend: 0.03 },
+    guarantee: "rare"
+  },
+  {
+    id: "elite",
+    name: "Elite Päckchen",
+    price: 2000,
+    cards: 5,
+    desc: "5 Karten. Garantiert mind. 1 Epic.",
+    odds: { common: 0.10, rare: 0.45, epic: 0.38, legend: 0.07 },
+    guarantee: "epic"
+  },
+  {
+    id: "legend",
+    name: "Legenden Päckchen",
+    price: 6000,
+    cards: 6,
+    desc: "6 Karten. Garantiert mind. 1 Legend!",
+    odds: { common: 0.00, rare: 0.30, epic: 0.55, legend: 0.15 },
+    guarantee: "legend"
+  },
+];
+
+const SELL_VALUE = { common: 15, rare: 60, epic: 200, legend: 800 };
+const RARITY_LABEL = { common: "Common", rare: "Rare", epic: "Epic", legend: "Legend" };
+const RARITY_ORDER = ["legend", "epic", "rare", "common"];
+
+// ===== State =====
+let state = {
+  coins: 500,
+  collection: {}, // playerName -> count
+};
+
+const SAVE_KEY = "fussballKartenSave_v1";
+
+function save() {
+  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+}
+function load() {
+  const raw = localStorage.getItem(SAVE_KEY);
+  if (raw) {
+    try { state = JSON.parse(raw); } catch (e) {}
+  }
+}
+
+function findPlayer(name) {
+  return PLAYERS.find(p => p.name === name);
+}
+
+function pickRarity(odds) {
+  const r = Math.random();
+  let acc = 0;
+  for (const k of ["legend", "epic", "rare", "common"]) {
+    acc += odds[k] || 0;
+    if (r < acc) return k;
+  }
+  return "common";
+}
+function pickByRarity(rarity) {
+  const pool = PLAYERS.filter(p => p.rarity === rarity);
+  if (!pool.length) {
+    // fallback
+    return PLAYERS[Math.floor(Math.random() * PLAYERS.length)];
+  }
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function openPack(pack) {
+  const drawn = [];
+  for (let i = 0; i < pack.cards; i++) {
+    const rar = pickRarity(pack.odds);
+    drawn.push(pickByRarity(rar));
+  }
+  // guarantee
+  if (pack.guarantee) {
+    const order = ["common", "rare", "epic", "legend"];
+    const minIdx = order.indexOf(pack.guarantee);
+    const has = drawn.some(c => order.indexOf(c.rarity) >= minIdx);
+    if (!has) {
+      drawn[drawn.length - 1] = pickByRarity(pack.guarantee);
+    }
+  }
+  drawn.forEach(p => {
+    state.collection[p.name] = (state.collection[p.name] || 0) + 1;
+  });
+  save();
+  showOpener(drawn, pack);
+  renderAll();
+}
+
+function buyPack(packId) {
+  const pack = PACKS.find(p => p.id === packId);
+  if (!pack) return;
+  if (state.coins < pack.price) {
+    toast("Nicht genug Münzen!");
+    return;
+  }
+  state.coins -= pack.price;
+  openPack(pack);
+}
+
+function sellCard(name) {
+  const p = findPlayer(name);
+  if (!p || !state.collection[name]) return;
+  state.collection[name]--;
+  if (state.collection[name] <= 0) delete state.collection[name];
+  state.coins += SELL_VALUE[p.rarity];
+  save();
+  toast(`+${SELL_VALUE[p.rarity]} Münzen für ${name}`);
+  renderAll();
+}
+
+// ===== Rendering =====
+const $ = id => document.getElementById(id);
+
+// Club color palette (primary, secondary)
+const CLUB_COLORS = {
+  "Inter Miami":       ["#f7b5cd", "#231f20"],
+  "Al-Nassr":          ["#f9d711", "#0b3a8c"],
+  "Real Madrid":       ["#ffffff", "#febd11"],
+  "Man City":          ["#6cabdd", "#1c2c5b"],
+  "Barcelona":         ["#a50044", "#004d98"],
+  "Liverpool":         ["#c8102e", "#f6eb61"],
+  "Bayern München":    ["#dc052d", "#0066b2"],
+  "Arsenal":           ["#ef0107", "#ffffff"],
+  "Bayer Leverkusen":  ["#000000", "#e32219"],
+  "Inter Milan":       ["#0a2240", "#0a2240"],
+  "Atletico Madrid":   ["#cb3524", "#262e62"],
+  "Man United":        ["#da291c", "#fbe122"],
+  "PSG":               ["#004170", "#da291c"],
+  "Dortmund":          ["#fde100", "#000000"],
+  "AC Milan":          ["#fb090b", "#000000"],
+  "AS Roma":           ["#8e1f2f", "#f0bc42"],
+  "LA Galaxy":         ["#00245d", "#febd11"],
+  "Nizza":             ["#e30613", "#000000"],
+  "Mönchengladbach":   ["#000000", "#00a651"],
+  "Wolfsburg":         ["#65b32e", "#ffffff"],
+  "Frankfurt":         ["#000000", "#e1000f"],
+  "Stuttgart":         ["#e32219", "#ffffff"],
+  "Brighton":          ["#0057b8", "#ffffff"],
+};
+
+function clubColors(club) {
+  return CLUB_COLORS[club] || ["#444444", "#888888"];
+}
+function hashNum(str, mod) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+  return Math.abs(h) % mod;
+}
+function shirtNumber(name) {
+  return hashNum(name, 99) + 1;
+}
+function initials(name) {
+  return name.split(/\s+/).map(p => p[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function portraitSVG(player) {
+  const [c1, c2] = clubColors(player.club);
+  const num = shirtNumber(player.name);
+  const ini = initials(player.name);
+  const grad = `g_${num}_${player.rarity}`;
+  // Skin tone variety (cosmetic, deterministic per name)
+  const skins = ["#f1c27d", "#e0ac69", "#c68642", "#8d5524", "#ffdbac"];
+  const skin = skins[hashNum(player.name, skins.length)];
+  return `
+  <svg class="portrait" viewBox="0 0 200 130" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <linearGradient id="${grad}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${c1}"/>
+        <stop offset="100%" stop-color="${c2}"/>
+      </linearGradient>
+    </defs>
+    <rect width="200" height="130" fill="url(#${grad})"/>
+    <!-- stadium silhouette -->
+    <path d="M0 110 L40 95 L80 105 L120 92 L160 102 L200 90 L200 130 L0 130 Z" fill="rgba(0,0,0,0.35)"/>
+    <!-- head -->
+    <circle cx="100" cy="55" r="22" fill="${skin}"/>
+    <!-- hair -->
+    <path d="M78 50 Q100 28 122 50 Q122 40 100 34 Q78 40 78 50 Z" fill="#2a1a0a"/>
+    <!-- neck -->
+    <rect x="92" y="73" width="16" height="8" fill="${skin}"/>
+    <!-- shirt body -->
+    <path d="M60 130 L70 85 Q100 78 130 85 L140 130 Z" fill="${c1}" stroke="${c2}" stroke-width="2"/>
+    <!-- collar / V -->
+    <path d="M88 82 L100 96 L112 82" fill="none" stroke="${c2}" stroke-width="3"/>
+    <!-- shirt stripe -->
+    <rect x="95" y="85" width="10" height="45" fill="${c2}" opacity="0.6"/>
+    <!-- shirt number -->
+    <text x="100" y="120" font-family="Arial Black, sans-serif" font-size="22"
+          fill="#ffffff" stroke="${c2}" stroke-width="1"
+          text-anchor="middle">${num}</text>
+    <!-- initials badge top-left -->
+    <rect x="6" y="6" width="32" height="20" rx="3" fill="rgba(0,0,0,0.55)"/>
+    <text x="22" y="21" font-family="Arial, sans-serif" font-size="13" font-weight="bold"
+          fill="#fff" text-anchor="middle">${ini}</text>
+  </svg>`;
+}
+
+function cardHTML(player, count) {
+  return `
+    <div class="card ${player.rarity}">
+      ${count > 1 ? `<div class="count">x${count}</div>` : ""}
+      <div class="badge ${player.rarity}">${RARITY_LABEL[player.rarity]}</div>
+      ${portraitSVG(player)}
+      <div class="ovr">OVR ${player.ovr}</div>
+      <h4>${player.name}</h4>
+      <div class="pos">${player.pos}</div>
+      <div class="club">${player.club}</div>
+      ${count !== undefined && count > 0
+        ? `<button class="sell" data-sell="${player.name}">Verkaufen (+${SELL_VALUE[player.rarity]})</button>`
+        : ""}
+    </div>
+  `;
+}
+
+function renderShop() {
+  $("shopGrid").innerHTML = PACKS.map(p => `
+    <div class="pack">
+      <h3>${p.name}</h3>
+      <div class="price">${p.price} Münzen</div>
+      <div class="desc">${p.desc}</div>
+      <button data-buy="${p.id}" ${state.coins < p.price ? "disabled" : ""}>Kaufen</button>
+    </div>
+  `).join("");
+  document.querySelectorAll("[data-buy]").forEach(b => {
+    b.onclick = () => buyPack(b.dataset.buy);
+  });
+}
+
+let currentFilter = "all";
+function renderCollection() {
+  const entries = Object.entries(state.collection).map(([name, c]) => {
+    return { player: findPlayer(name), count: c };
+  }).filter(e => e.player);
+
+  const filtered = currentFilter === "all"
+    ? entries
+    : entries.filter(e => e.player.rarity === currentFilter);
+
+  filtered.sort((a, b) => {
+    const r = RARITY_ORDER.indexOf(a.player.rarity) - RARITY_ORDER.indexOf(b.player.rarity);
+    if (r !== 0) return r;
+    return b.player.ovr - a.player.ovr;
+  });
+
+  if (!filtered.length) {
+    $("collectionGrid").innerHTML = `<div class="empty">Noch keine Karten in dieser Kategorie. Kauf ein Päckchen im Shop!</div>`;
+    return;
+  }
+  $("collectionGrid").innerHTML = filtered.map(e => cardHTML(e.player, e.count)).join("");
+  document.querySelectorAll("[data-sell]").forEach(b => {
+    b.onclick = () => sellCard(b.dataset.sell);
+  });
+}
+
+function renderHUD() {
+  $("coins").textContent = state.coins;
+  const total = Object.values(state.collection).reduce((a, b) => a + b, 0);
+  $("totalCards").textContent = total;
+  $("uniqueCards").textContent = Object.keys(state.collection).length;
+  $("totalPool").textContent = PLAYERS.length;
+}
+
+function renderAll() {
+  renderHUD();
+  renderShop();
+  renderCollection();
+}
+
+function showOpener(drawn, pack) {
+  $("openerTitle").textContent = `${pack.name} geöffnet!`;
+  $("drawn").innerHTML = drawn.map((p, i) => {
+    const html = cardHTML(p, undefined);
+    return html.replace('class="card', `style="animation-delay: ${i * 0.25}s" class="card`);
+  }).join("");
+  $("opener").classList.add("show");
+}
+
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove("show"), 4000);
+}
+
+// ===== Events =====
+document.querySelectorAll(".tab").forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+    t.classList.add("active");
+    $(t.dataset.tab).classList.add("active");
+  };
+});
+
+document.querySelectorAll(".filters button").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll(".filters button").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    currentFilter = b.dataset.filter;
+    renderCollection();
+  };
+});
+
+$("closeOpener").onclick = () => $("opener").classList.remove("show");
+
+const ROASTS = [
+  "Du sammelst Karten wie meine Oma Briefmarken - langsam und mit zu viel Liebe.",
+  "Dein Päckchen-Glück ist schlechter als der VAR an einem schlechten Tag.",
+  "Wenn du so weiterspielst, spielst du bald in der Kreisliga C... als Wasserträger.",
+  "Mit deinen Münzen kannst du dir nicht mal die Eckfahne leisten.",
+  "Selbst Hummels' Wendekreis ist kleiner als deine Geduld beim Pack-Öffnen.",
+  "Du suchst Legenden? Such erstmal die Tordifferenz auf dem Trainingsplatz.",
+  "Dein Kontostand ruft an, er möchte wieder nach Hause.",
+  "Hör auf zu klicken, du machst die Maus mehr platt als Müller das Raumdeuten.",
+  "Wenn Spielintelligenz Geld wäre - du wärst pleite.",
+  "Junge, Junge - dein Päckchen-Timing ist wie ein Bayern-Stürmer im Abseits: immer falsch.",
+  "Du bist der Grund, warum es einen Trainerstuhl gibt - damit man dich draufsetzen und wegrollen kann.",
+  "Ich hab mehr Talent in meinem linken Ohrläppchen als du in der ganzen Sammlung.",
+  "Schon mal überlegt, Tischfussball zu spielen? Da geht weniger schief.",
+  "Bei dir öffnet sich nicht das Päckchen, bei dir öffnet sich das Trainingslager der Verlierer.",
+  "Du hast den Spielwitz einer Verkehrsinsel.",
+  "Dein Ballgefühl ist wie eine kalte Dusche - kurz und unangenehm.",
+];
+$("roastBtn").onclick = () => {
+  const msg = ROASTS[Math.floor(Math.random() * ROASTS.length)];
+  toast("TRAINER: " + msg);
+};
+
+$("resetBtn").onclick = () => {
+  if (confirm("Wirklich alles zurücksetzen?")) {
+    state = { coins: 500, collection: {} };
+    save();
+    renderAll();
+  }
+};
+
+// ===== Init =====
+load();
+renderAll();
+</script>
+</body>
+</html>
