@@ -2,106 +2,130 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8" />
-<title>Last Delivery</title>
+<title>Skibidi Toilet — Flucht!</title>
 <style>
   html, body {
     margin: 0;
     padding: 0;
-    background: #000;
-    color: #d8d8d8;
-    font-family: "Courier New", monospace;
+    background: #87ceeb;
+    color: #fff;
+    font-family: "Comic Sans MS", "Trebuchet MS", sans-serif;
     overflow: hidden;
     height: 100%;
   }
   #game {
     display: block;
     margin: 0 auto;
-    background: #000;
+    background: #6db96d;
     image-rendering: pixelated;
-    cursor: crosshair;
+    cursor: none;
   }
   #hud {
     position: fixed;
-    top: 10px;
-    left: 10px;
-    font-size: 14px;
-    text-shadow: 0 0 4px #000, 0 0 8px #000;
+    top: 12px;
+    left: 12px;
+    font-size: 18px;
+    text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
     pointer-events: none;
     user-select: none;
     line-height: 1.4em;
+    font-weight: bold;
   }
   #subtitle {
     position: fixed;
-    bottom: 30px;
+    bottom: 40px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 18px;
+    font-size: 24px;
     text-align: center;
-    text-shadow: 0 0 6px #000;
+    text-shadow: 3px 3px 0 #000;
     pointer-events: none;
     user-select: none;
-    max-width: 80%;
+    max-width: 90%;
     opacity: 0;
-    transition: opacity 0.4s;
+    transition: opacity 0.3s;
+    color: #ffe14a;
+    font-weight: bold;
   }
   #subtitle.show { opacity: 1; }
   #overlay {
     position: fixed;
     inset: 0;
-    background: #000;
+    background: radial-gradient(circle, #5a3a1a 0%, #2a1a0a 100%);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
     z-index: 10;
-    transition: opacity 0.8s;
+    transition: opacity 0.6s;
+    padding: 20px;
+    box-sizing: border-box;
   }
   #overlay.hidden {
     opacity: 0;
     pointer-events: none;
   }
+  #overlay.start {
+    background: linear-gradient(180deg, #87ceeb 0%, #6db96d 100%);
+  }
   #overlay h1 {
-    font-size: 42px;
+    font-size: 64px;
     margin: 0 0 10px 0;
-    color: #b00000;
-    letter-spacing: 6px;
-    text-shadow: 0 0 8px #500, 0 0 24px #200;
+    color: #ffe14a;
+    letter-spacing: 4px;
+    text-shadow: 4px 4px 0 #000, 8px 8px 0 #8b4513;
   }
   #overlay h2 {
-    font-size: 20px;
-    margin: 0 0 30px 0;
-    color: #888;
-    letter-spacing: 2px;
+    font-size: 24px;
+    margin: 0 0 24px 0;
+    color: #fff;
+    letter-spacing: 1px;
+    text-shadow: 2px 2px 0 #000;
   }
   #overlay p {
-    max-width: 500px;
+    max-width: 560px;
     line-height: 1.6em;
-    color: #aaa;
-    font-size: 14px;
+    color: #fff;
+    font-size: 16px;
+    text-shadow: 2px 2px 0 #000;
   }
   #overlay button {
-    margin-top: 20px;
-    background: #1a1a1a;
-    border: 1px solid #b00000;
-    color: #d8d8d8;
-    padding: 12px 28px;
+    margin-top: 22px;
+    background: #ffe14a;
+    border: 4px solid #000;
+    color: #000;
+    padding: 14px 36px;
     font-family: inherit;
-    font-size: 16px;
+    font-size: 22px;
+    font-weight: bold;
     cursor: pointer;
-    letter-spacing: 3px;
+    letter-spacing: 2px;
+    border-radius: 8px;
+    box-shadow: 4px 4px 0 #000;
   }
   #overlay button:hover {
-    background: #2a0000;
-    color: #ff5555;
+    background: #fff;
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 #000;
   }
-  .key { color: #b00000; }
-  #vignette {
+  .key {
+    color: #ffe14a;
+    background: #000;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+  #poop-overlay {
     position: fixed;
     inset: 0;
     pointer-events: none;
-    box-shadow: inset 0 0 200px 60px #000;
-    z-index: 5;
+    z-index: 8;
+    background: radial-gradient(circle at center, rgba(90,55,25,0.0) 0%, rgba(70,40,20,0.0) 100%);
+    transition: background 0.4s;
+  }
+  #poop-overlay.active {
+    background: radial-gradient(circle at center, rgba(80,45,20,0.9) 0%, rgba(40,20,10,0.95) 100%);
   }
 </style>
 </head>
@@ -109,21 +133,20 @@
 <canvas id="game" width="960" height="600"></canvas>
 <div id="hud"></div>
 <div id="subtitle"></div>
-<div id="vignette"></div>
+<div id="poop-overlay"></div>
 
-<div id="overlay">
-  <h1>LAST DELIVERY</h1>
-  <h2>Bestellung #616</h2>
+<div id="overlay" class="start">
+  <h1>SKIBIDI FLUCHT</h1>
+  <h2>Renn um dein Leben!</h2>
   <p>
-    Du bist Pizzalieferant. Letzte Lieferung der Nacht.<br>
-    Der Kunde hat dich erwartet... aber das ist <i>kein Mensch</i>.<br><br>
-    <span class="key">WASD</span> bewegen &nbsp;
-    <span class="key">MAUS</span> Taschenlampe zielen<br>
-    <span class="key">LMB</span> schießen (sobald Waffe gefunden)<br>
-    <span class="key">E</span> Telefon benutzen<br>
-    <span class="key">SHIFT</span> sprinten (kurz)
+    Ein Skibidi Toilet verfolgt dich.<br>
+    Wenn er dich schnappt — wirst du <b>ANGEKACKT</b>. 💩<br><br>
+    Sammle <b>Klopapier</b> 🧻 für Punkte und <b>Pömpel</b> für Sprintkraft.<br>
+    Überlebe so lange wie möglich!<br><br>
+    <span class="key">WASD</span> oder <span class="key">Pfeile</span> &nbsp;bewegen<br>
+    <span class="key">SHIFT</span> sprinten<br>
   </p>
-  <button id="startBtn">FLIEHEN</button>
+  <button id="startBtn">RENNEN!</button>
 </div>
 
 <script>
@@ -135,32 +158,23 @@ const hud = document.getElementById("hud");
 const subtitleEl = document.getElementById("subtitle");
 const overlay = document.getElementById("overlay");
 const startBtn = document.getElementById("startBtn");
+const poopOverlay = document.getElementById("poop-overlay");
 
 const W = canvas.width;
 const H = canvas.height;
 
-// World is bigger than the screen.
 const WORLD_W = 2400;
 const WORLD_H = 1800;
-const TILE = 40;
+const TILE = 60;
 
 const keys = {};
-const mouse = { x: W / 2, y: H / 2, down: false };
-
 addEventListener("keydown", e => {
   keys[e.key.toLowerCase()] = true;
   if (e.key === " ") e.preventDefault();
 });
 addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
-canvas.addEventListener("mousemove", e => {
-  const r = canvas.getBoundingClientRect();
-  mouse.x = (e.clientX - r.left) * (canvas.width / r.width);
-  mouse.y = (e.clientY - r.top) * (canvas.height / r.height);
-});
-canvas.addEventListener("mousedown", () => { mouse.down = true; });
-canvas.addEventListener("mouseup", () => { mouse.down = false; });
 
-// --- Audio (procedural) ---
+// --- Audio ---
 let audioCtx = null;
 function ensureAudio() {
   if (!audioCtx) {
@@ -168,7 +182,7 @@ function ensureAudio() {
     catch (e) { audioCtx = null; }
   }
 }
-function beep(freq, dur, type = "sine", vol = 0.15) {
+function tone(freq, dur, type = "square", vol = 0.15) {
   if (!audioCtx) return;
   const t = audioCtx.currentTime;
   const o = audioCtx.createOscillator();
@@ -181,149 +195,173 @@ function beep(freq, dur, type = "sine", vol = 0.15) {
   o.start(t);
   o.stop(t + dur);
 }
-function gunshot() {
+function skibidiSing() {
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  const notes = [330, 392, 330, 261, 330, 392];
+  notes.forEach((f, i) => {
+    setTimeout(() => tone(f, 0.12, "square", 0.08), i * 110);
+  });
+}
+function poopSound() {
   if (!audioCtx) return;
   const t = audioCtx.currentTime;
-  const bufferSize = audioCtx.sampleRate * 0.25;
+  const bufferSize = audioCtx.sampleRate * 0.6;
   const buf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
   const data = buf.getChannelData(0);
   for (let i = 0; i < bufferSize; i++) {
-    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
+    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.5) * 0.7;
   }
   const src = audioCtx.createBufferSource();
   src.buffer = buf;
   const g = audioCtx.createGain();
-  g.gain.setValueAtTime(0.4, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+  g.gain.setValueAtTime(0.5, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
   const filter = audioCtx.createBiquadFilter();
   filter.type = "lowpass";
-  filter.frequency.value = 1200;
+  filter.frequency.value = 500;
   src.connect(filter).connect(g).connect(audioCtx.destination);
   src.start(t);
 }
-function demonGrowl() {
+function pickupSound() {
+  tone(660, 0.08, "triangle", 0.18);
+  setTimeout(() => tone(880, 0.1, "triangle", 0.18), 80);
+}
+function flushSound() {
   if (!audioCtx) return;
   const t = audioCtx.currentTime;
-  const o = audioCtx.createOscillator();
-  const o2 = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = "sawtooth"; o2.type = "square";
-  o.frequency.setValueAtTime(70, t);
-  o.frequency.linearRampToValueAtTime(45, t + 0.8);
-  o2.frequency.setValueAtTime(73, t);
-  o2.frequency.linearRampToValueAtTime(48, t + 0.8);
-  g.gain.setValueAtTime(0.0, t);
-  g.gain.linearRampToValueAtTime(0.18, t + 0.1);
-  g.gain.linearRampToValueAtTime(0.0, t + 0.9);
-  o.connect(g); o2.connect(g); g.connect(audioCtx.destination);
-  o.start(t); o2.start(t); o.stop(t + 0.95); o2.stop(t + 0.95);
-}
-function policeSiren(duration = 4) {
-  if (!audioCtx) return;
-  const t0 = audioCtx.currentTime;
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = "square";
-  for (let i = 0; i < duration * 2; i++) {
-    o.frequency.setValueAtTime(i % 2 ? 720 : 480, t0 + i * 0.5);
+  const bufferSize = audioCtx.sampleRate * 0.8;
+  const buf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * 0.5;
   }
-  g.gain.setValueAtTime(0.08, t0);
-  g.gain.linearRampToValueAtTime(0, t0 + duration);
-  o.connect(g).connect(audioCtx.destination);
-  o.start(t0); o.stop(t0 + duration);
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.15, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.frequency.value = 1500;
+  src.connect(filter).connect(g).connect(audioCtx.destination);
+  src.start(t);
 }
 
-// --- World generation ---
-// Walls: rectangles {x,y,w,h}
+// --- World ---
 let walls = [];
-let phoneBooth = null;
-let weaponPickup = null;
-let player, demon;
+let bushes = [];
+let toiletPapers = [];
+let plungers = [];
+let player, toilet;
+let toilets = [];
 
 function rectsOverlap(a, b) {
   return a.x < b.x + b.w && a.x + a.w > b.x &&
          a.y < b.y + b.h && a.y + a.h > b.y;
 }
-function pointInRect(px, py, r) {
-  return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
+function circleRectOverlap(cx, cy, cr, r) {
+  const nx = Math.max(r.x, Math.min(cx, r.x + r.w));
+  const ny = Math.max(r.y, Math.min(cy, r.y + r.h));
+  const dx = cx - nx, dy = cy - ny;
+  return dx * dx + dy * dy < cr * cr;
 }
 
 function buildWorld() {
   walls = [];
-  // outer border
-  walls.push({ x: 0, y: 0, w: WORLD_W, h: 20 });
-  walls.push({ x: 0, y: WORLD_H - 20, w: WORLD_W, h: 20 });
-  walls.push({ x: 0, y: 0, w: 20, h: WORLD_H });
-  walls.push({ x: WORLD_W - 20, y: 0, w: 20, h: WORLD_H });
+  bushes = [];
 
-  // Apartment block 1 (top-left) - where you started the delivery
-  walls.push({ x: 200, y: 200, w: 400, h: 30 });
-  walls.push({ x: 200, y: 200, w: 30, h: 250 });
-  walls.push({ x: 570, y: 200, w: 30, h: 100 });
-  walls.push({ x: 570, y: 350, w: 30, h: 100 });
-  walls.push({ x: 200, y: 420, w: 200, h: 30 });
-  walls.push({ x: 470, y: 420, w: 130, h: 30 });
-  // interior wall
-  walls.push({ x: 350, y: 230, w: 30, h: 100 });
+  // Border fence
+  walls.push({ x: 0, y: 0, w: WORLD_W, h: 30 });
+  walls.push({ x: 0, y: WORLD_H - 30, w: WORLD_W, h: 30 });
+  walls.push({ x: 0, y: 0, w: 30, h: WORLD_H });
+  walls.push({ x: WORLD_W - 30, y: 0, w: 30, h: WORLD_H });
 
-  // Random crates / cars scattered
-  const decor = [
-    { x: 800, y: 350, w: 80, h: 40 },
-    { x: 950, y: 500, w: 120, h: 60 },
-    { x: 1200, y: 250, w: 60, h: 60 },
-    { x: 1400, y: 600, w: 200, h: 40 },
-    { x: 1700, y: 400, w: 40, h: 200 },
-    { x: 900, y: 900, w: 220, h: 50 },
-    { x: 1300, y: 1000, w: 60, h: 60 },
-    { x: 1500, y: 1100, w: 40, h: 180 },
-    { x: 600, y: 1300, w: 250, h: 40 },
-    { x: 250, y: 900, w: 60, h: 60 },
-    { x: 350, y: 1100, w: 200, h: 30 },
-    { x: 1850, y: 800, w: 50, h: 50 },
-    { x: 2000, y: 1100, w: 250, h: 40 },
-    { x: 2100, y: 1300, w: 30, h: 200 },
-    { x: 1100, y: 1450, w: 300, h: 40 },
-    { x: 1700, y: 1500, w: 60, h: 60 },
-    { x: 400, y: 1500, w: 60, h: 60 },
-    { x: 800, y: 700, w: 30, h: 150 },
+  // Scattered hedges / obstacles to weave through
+  const obstacles = [
+    { x: 300, y: 250, w: 200, h: 40 },
+    { x: 600, y: 400, w: 40, h: 200 },
+    { x: 900, y: 200, w: 250, h: 40 },
+    { x: 1200, y: 500, w: 40, h: 250 },
+    { x: 1500, y: 300, w: 200, h: 40 },
+    { x: 1800, y: 600, w: 40, h: 200 },
+    { x: 2000, y: 350, w: 200, h: 40 },
+    { x: 400, y: 800, w: 250, h: 40 },
+    { x: 800, y: 900, w: 40, h: 200 },
+    { x: 1100, y: 1100, w: 250, h: 40 },
+    { x: 1500, y: 950, w: 40, h: 250 },
+    { x: 1900, y: 1050, w: 250, h: 40 },
+    { x: 300, y: 1300, w: 40, h: 250 },
+    { x: 700, y: 1400, w: 250, h: 40 },
+    { x: 1200, y: 1500, w: 40, h: 200 },
+    { x: 1700, y: 1400, w: 250, h: 40 },
+    { x: 2050, y: 1300, w: 40, h: 200 },
+    { x: 500, y: 600, w: 60, h: 60 },
+    { x: 1400, y: 700, w: 60, h: 60 },
+    { x: 950, y: 1300, w: 60, h: 60 },
+    { x: 1900, y: 850, w: 60, h: 60 },
   ];
-  for (const d of decor) walls.push(d);
+  for (const o of obstacles) {
+    walls.push(o);
+    bushes.push(o);
+  }
 
-  // Phone booth at far side
-  phoneBooth = { x: WORLD_W - 200, y: WORLD_H - 250, w: 50, h: 80, used: false, charging: 0 };
+  // Toilet paper pickups
+  toiletPapers = [];
+  for (let i = 0; i < 15; i++) {
+    let x, y, ok = false, tries = 0;
+    while (!ok && tries++ < 50) {
+      x = 100 + Math.random() * (WORLD_W - 200);
+      y = 100 + Math.random() * (WORLD_H - 200);
+      ok = true;
+      for (const w of walls) {
+        if (x > w.x - 30 && x < w.x + w.w + 30 && y > w.y - 30 && y < w.y + w.h + 30) {
+          ok = false; break;
+        }
+      }
+    }
+    toiletPapers.push({ x, y, picked: false });
+  }
 
-  // Weapon pickup roughly in middle
-  weaponPickup = { x: 1180, y: 820, picked: false };
+  // Plunger pickups
+  plungers = [];
+  for (let i = 0; i < 5; i++) {
+    let x, y, ok = false, tries = 0;
+    while (!ok && tries++ < 50) {
+      x = 200 + Math.random() * (WORLD_W - 400);
+      y = 200 + Math.random() * (WORLD_H - 400);
+      ok = true;
+      for (const w of walls) {
+        if (x > w.x - 30 && x < w.x + w.w + 30 && y > w.y - 30 && y < w.y + w.h + 30) {
+          ok = false; break;
+        }
+      }
+    }
+    plungers.push({ x, y, picked: false });
+  }
 
-  // Player starts at apartment door
   player = {
-    x: 480, y: 470,
-    r: 12,
-    speed: 130,
+    x: 200, y: 200,
+    r: 14,
+    speed: 180,
     angle: 0,
-    hasWeapon: false,
-    ammo: 0,
-    sprintLeft: 2.0,
-    sprintMax: 2.0,
-    sprintRegen: 0.6,
-    hp: 3,
-    invuln: 0,
-    flashlight: { range: 280, cone: Math.PI / 5 }
+    sprintLeft: 2.5,
+    sprintMax: 2.5,
+    sprintRegen: 0.4,
+    walkPhase: 0,
   };
 
-  // Demon spawns inside the apartment
-  demon = {
-    x: 380, y: 350,
-    r: 16,
-    speed: 95,
+  toilets = [{
+    x: WORLD_W - 300, y: WORLD_H - 300,
+    r: 22,
+    baseSpeed: 110,
+    speed: 110,
     angle: 0,
-    stun: 0,
-    state: "stalk",
-    growlTimer: 2 + Math.random() * 3,
-  };
+    singTimer: 0,
+    bobPhase: 0,
+  }];
 }
 
-// Collision: move circle (player) against rectangles
 function moveCircle(ent, dx, dy) {
   ent.x += dx;
   for (const w of walls) {
@@ -340,85 +378,67 @@ function moveCircle(ent, dx, dy) {
     }
   }
 }
-function circleRectOverlap(cx, cy, cr, r) {
-  const nx = Math.max(r.x, Math.min(cx, r.x + r.w));
-  const ny = Math.max(r.y, Math.min(cy, r.y + r.h));
-  const dx = cx - nx, dy = cy - ny;
-  return dx * dx + dy * dy < cr * cr;
-}
 
-// Line-of-sight: does a line from (x1,y1) to (x2,y2) cross any wall?
-function losBlocked(x1, y1, x2, y2) {
-  for (const w of walls) {
-    if (lineRect(x1, y1, x2, y2, w)) return true;
-  }
-  return false;
-}
-function lineRect(x1, y1, x2, y2, r) {
-  return lineLine(x1, y1, x2, y2, r.x, r.y, r.x + r.w, r.y) ||
-         lineLine(x1, y1, x2, y2, r.x + r.w, r.y, r.x + r.w, r.y + r.h) ||
-         lineLine(x1, y1, x2, y2, r.x + r.w, r.y + r.h, r.x, r.y + r.h) ||
-         lineLine(x1, y1, x2, y2, r.x, r.y + r.h, r.x, r.y);
-}
-function lineLine(x1, y1, x2, y2, x3, y3, x4, y4) {
-  const d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-  if (Math.abs(d) < 1e-6) return false;
-  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / d;
-  const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / d;
-  return t >= 0 && t <= 1 && u >= 0 && u <= 1;
-}
-
-// --- Subtitle queue ---
+// --- Subtitles ---
 let subtitleTimer = 0;
-function say(text, ms = 3500) {
+function say(text, ms = 2500) {
   subtitleEl.textContent = text;
   subtitleEl.classList.add("show");
   subtitleTimer = ms / 1000;
 }
 
-// --- Bullets ---
-let bullets = [];
-function fireBullet() {
-  if (!player.hasWeapon || player.ammo <= 0) return;
-  if (player.fireCD > 0) return;
-  player.ammo--;
-  player.fireCD = 0.35;
-  const ang = player.angle;
-  bullets.push({
-    x: player.x + Math.cos(ang) * 14,
-    y: player.y + Math.sin(ang) * 14,
-    vx: Math.cos(ang) * 800,
-    vy: Math.sin(ang) * 800,
-    life: 0.7,
-  });
-  gunshot();
-}
-
-// --- Game state ---
-let state = "menu"; // menu, play, dead, win
-let policeTimer = 0; // counts up to 12s after call
-let calledPolice = false;
+// --- State ---
+let state = "menu";
 let lastTime = 0;
 let cam = { x: 0, y: 0 };
 let screenShake = 0;
-let darkness = 1.0; // overall dark factor
-let demonHits = 0;
+let survivalTime = 0;
+let score = 0;
+let particles = [];
+let bestTime = parseFloat(localStorage.getItem("skibidi_best") || "0");
 
 function resetGame() {
   buildWorld();
-  bullets = [];
   state = "play";
-  calledPolice = false;
-  policeTimer = 0;
+  survivalTime = 0;
+  score = 0;
+  particles = [];
   screenShake = 0;
-  demonHits = 0;
-  player.fireCD = 0;
-  say("Ich liefere nur noch diese eine Pizza ab... was ist das für ein Geruch?", 4500);
+  poopOverlay.classList.remove("active");
+  say("Skibidi dop dop dop yes yes!", 3000);
 }
 
-// --- Update ---
+function spawnExtraToilet() {
+  // Spawn far from player
+  let x, y, tries = 0;
+  do {
+    x = 100 + Math.random() * (WORLD_W - 200);
+    y = 100 + Math.random() * (WORLD_H - 200);
+    tries++;
+  } while (Math.hypot(x - player.x, y - player.y) < 600 && tries < 50);
+  toilets.push({
+    x, y,
+    r: 22,
+    baseSpeed: 100 + Math.random() * 30,
+    speed: 100,
+    angle: 0,
+    singTimer: Math.random() * 3,
+    bobPhase: Math.random() * Math.PI * 2,
+  });
+  say("Noch ein Skibidi taucht auf!!", 2200);
+  skibidiSing();
+}
+
 function update(dt) {
   if (state !== "play") return;
+
+  survivalTime += dt;
+
+  // Spawn more toilets over time
+  const desired = 1 + Math.floor(survivalTime / 20);
+  if (toilets.length < desired && toilets.length < 6) {
+    spawnExtraToilet();
+  }
 
   // Player movement
   let mx = 0, my = 0;
@@ -427,10 +447,11 @@ function update(dt) {
   if (keys["a"] || keys["arrowleft"]) mx -= 1;
   if (keys["d"] || keys["arrowright"]) mx += 1;
   const len = Math.hypot(mx, my);
-  if (len > 0) { mx /= len; my /= len; }
+  if (len > 0) { mx /= len; my /= len; player.angle = Math.atan2(my, mx); }
 
   let speed = player.speed;
-  if (keys["shift"] && player.sprintLeft > 0 && len > 0) {
+  const sprinting = keys["shift"] && player.sprintLeft > 0 && len > 0;
+  if (sprinting) {
     speed *= 1.7;
     player.sprintLeft -= dt;
     if (player.sprintLeft < 0) player.sprintLeft = 0;
@@ -439,143 +460,95 @@ function update(dt) {
   }
 
   moveCircle(player, mx * speed * dt, my * speed * dt);
+  if (len > 0) player.walkPhase += dt * (sprinting ? 16 : 10);
 
-  // Aim
-  const worldMouseX = mouse.x + cam.x;
-  const worldMouseY = mouse.y + cam.y;
-  player.angle = Math.atan2(worldMouseY - player.y, worldMouseX - player.x);
-
-  // Fire
-  player.fireCD = Math.max(0, (player.fireCD || 0) - dt);
-  if (mouse.down) fireBullet();
-
-  // Weapon pickup
-  if (!weaponPickup.picked) {
-    const dx = player.x - weaponPickup.x, dy = player.y - weaponPickup.y;
+  // Pickups
+  for (const tp of toiletPapers) {
+    if (tp.picked) continue;
+    const dx = player.x - tp.x, dy = player.y - tp.y;
     if (dx * dx + dy * dy < 30 * 30) {
-      weaponPickup.picked = true;
-      player.hasWeapon = true;
-      player.ammo = 6;
-      say("Eine Pistole. Wem auch immer die gehört hat, danke. Sechs Schuss.", 4000);
-      beep(440, 0.1, "triangle", 0.2);
+      tp.picked = true;
+      score += 10;
+      pickupSound();
+      spawnParticles(tp.x, tp.y, "#ffffff", 12);
+    }
+  }
+  for (const pl of plungers) {
+    if (pl.picked) continue;
+    const dx = player.x - pl.x, dy = player.y - pl.y;
+    if (dx * dx + dy * dy < 30 * 30) {
+      pl.picked = true;
+      player.sprintMax += 1.0;
+      player.sprintLeft = player.sprintMax;
+      score += 25;
+      pickupSound();
+      setTimeout(() => tone(1100, 0.12, "triangle", 0.2), 160);
+      spawnParticles(pl.x, pl.y, "#ff5555", 16);
+      say("Pömpel! Mehr Sprint!", 2000);
     }
   }
 
-  // Phone booth interact
-  const pbCenter = { x: phoneBooth.x + phoneBooth.w / 2, y: phoneBooth.y + phoneBooth.h / 2 };
-  const pbDx = player.x - pbCenter.x, pbDy = player.y - pbCenter.y;
-  const nearPhone = pbDx * pbDx + pbDy * pbDy < 60 * 60;
-  if (nearPhone && !calledPolice) {
-    if (keys["e"]) {
-      phoneBooth.charging += dt;
-      if (phoneBooth.charging === 0) say("Halte E gedrückt...", 1500);
-      if (phoneBooth.charging > 2.5) {
-        calledPolice = true;
-        say("Hallo? Polizei? Bitte... bitte schnell! Hauptstraße 616!", 4500);
-        policeSiren(4);
-      }
-    } else {
-      if (phoneBooth.charging > 0 && phoneBooth.charging < 2.5) {
-        say("Halte [E] zum Wählen. Polizei rufen.", 2000);
-      }
-      phoneBooth.charging = Math.max(0, phoneBooth.charging - dt);
+  // Toilets AI
+  for (const t of toilets) {
+    t.bobPhase += dt * 8;
+    t.singTimer -= dt;
+    if (t.singTimer <= 0) {
+      skibidiSing();
+      t.singTimer = 3 + Math.random() * 4;
     }
-  }
 
-  // After call, police take time to arrive
-  if (calledPolice) {
-    policeTimer += dt;
-    if (policeTimer > 12) {
-      state = "win";
-      showWin();
-    }
-  }
+    // Difficulty ramp: toilets speed up over time
+    t.speed = t.baseSpeed + survivalTime * 1.5;
 
-  // Bullets update
-  for (const b of bullets) {
-    b.x += b.vx * dt;
-    b.y += b.vy * dt;
-    b.life -= dt;
-    for (const w of walls) {
-      if (pointInRect(b.x, b.y, w)) { b.life = 0; break; }
-    }
-    // hit demon?
-    const ddx = b.x - demon.x, ddy = b.y - demon.y;
-    if (ddx * ddx + ddy * ddy < demon.r * demon.r && demon.stun <= 0) {
-      b.life = 0;
-      demon.stun = 4.0; // big push-back
-      demonHits++;
-      // teleport demon further away to simulate retreat / vorsprung
-      const ang = Math.atan2(demon.y - player.y, demon.x - player.x);
-      demon.x += Math.cos(ang) * 300;
-      demon.y += Math.sin(ang) * 300;
-      // keep inside world
-      demon.x = Math.max(40, Math.min(WORLD_W - 40, demon.x));
-      demon.y = Math.max(40, Math.min(WORLD_H - 40, demon.y));
-      screenShake = 0.4;
-      demonGrowl();
-      say("Er weicht zurück! Lauf!", 2200);
-    }
-  }
-  bullets = bullets.filter(b => b.life > 0);
-
-  // Demon AI
-  if (demon.stun > 0) {
-    demon.stun -= dt;
-  } else {
-    // chase player; speeds up after police are called (final push)
-    let dspeed = demon.speed;
-    if (calledPolice) dspeed *= 1.35;
-    const dx = player.x - demon.x, dy = player.y - demon.y;
+    const dx = player.x - t.x, dy = player.y - t.y;
     const dist = Math.hypot(dx, dy);
     if (dist > 1) {
-      // Crude pathing: try direct; if blocked, jitter angle slightly
       let ang = Math.atan2(dy, dx);
-      let testX = demon.x + Math.cos(ang) * dspeed * dt;
-      let testY = demon.y + Math.sin(ang) * dspeed * dt;
+      let testX = t.x + Math.cos(ang) * t.speed * dt;
+      let testY = t.y + Math.sin(ang) * t.speed * dt;
       let blocked = false;
       for (const w of walls) {
-        if (circleRectOverlap(testX, testY, demon.r, w)) { blocked = true; break; }
+        if (circleRectOverlap(testX, testY, t.r, w)) { blocked = true; break; }
       }
       if (blocked) {
         const tryAngles = [ang + 0.6, ang - 0.6, ang + 1.2, ang - 1.2, ang + Math.PI / 2, ang - Math.PI / 2];
         for (const a of tryAngles) {
-          const tx = demon.x + Math.cos(a) * dspeed * dt;
-          const ty = demon.y + Math.sin(a) * dspeed * dt;
+          const tx = t.x + Math.cos(a) * t.speed * dt;
+          const ty = t.y + Math.sin(a) * t.speed * dt;
           let ok = true;
           for (const w of walls) {
-            if (circleRectOverlap(tx, ty, demon.r, w)) { ok = false; break; }
+            if (circleRectOverlap(tx, ty, t.r, w)) { ok = false; break; }
           }
           if (ok) { ang = a; break; }
         }
       }
-      moveCircle(demon, Math.cos(ang) * dspeed * dt, Math.sin(ang) * dspeed * dt);
-      demon.angle = ang;
+      moveCircle(t, Math.cos(ang) * t.speed * dt, Math.sin(ang) * t.speed * dt);
+      t.angle = ang;
     }
-    demon.growlTimer -= dt;
-    if (demon.growlTimer <= 0) {
-      demonGrowl();
-      demon.growlTimer = 4 + Math.random() * 5;
-    }
-  }
 
-  // Demon hits player
-  if (player.invuln > 0) player.invuln -= dt;
-  const pdx = player.x - demon.x, pdy = player.y - demon.y;
-  if (pdx * pdx + pdy * pdy < (player.r + demon.r) * (player.r + demon.r) && player.invuln <= 0 && demon.stun <= 0) {
-    player.hp--;
-    player.invuln = 1.2;
-    screenShake = 0.5;
-    demonGrowl();
-    if (player.hp <= 0) {
+    // Caught!
+    const pdx = player.x - t.x, pdy = player.y - t.y;
+    if (pdx * pdx + pdy * pdy < (player.r + t.r) * (player.r + t.r)) {
       state = "dead";
-      showDead();
-    } else {
-      say("Er hat mich erwischt! Ich blute!", 2500);
+      poopSound();
+      screenShake = 1.0;
+      poopOverlay.classList.add("active");
+      for (let i = 0; i < 80; i++) spawnParticles(player.x, player.y, "#5a3a1a", 1, 3);
+      setTimeout(showDead, 900);
+      return;
     }
   }
 
-  // Camera follow with shake
+  // Particles
+  for (const p of particles) {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += 200 * dt;
+    p.life -= dt;
+  }
+  particles = particles.filter(p => p.life > 0);
+
+  // Camera follow
   const targetCamX = player.x - W / 2;
   const targetCamY = player.y - H / 2;
   cam.x += (targetCamX - cam.x) * Math.min(1, dt * 8);
@@ -584,14 +557,27 @@ function update(dt) {
   cam.y = Math.max(0, Math.min(WORLD_H - H, cam.y));
   if (screenShake > 0) {
     screenShake -= dt;
-    cam.x += (Math.random() - 0.5) * screenShake * 20;
-    cam.y += (Math.random() - 0.5) * screenShake * 20;
+    cam.x += (Math.random() - 0.5) * screenShake * 24;
+    cam.y += (Math.random() - 0.5) * screenShake * 24;
   }
 
-  // Subtitle timer
   if (subtitleTimer > 0) {
     subtitleTimer -= dt;
     if (subtitleTimer <= 0) subtitleEl.classList.remove("show");
+  }
+}
+
+function spawnParticles(x, y, color, count, sizeMul = 1) {
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 200,
+      vy: (Math.random() - 0.5) * 200 - 80,
+      life: 0.5 + Math.random() * 0.6,
+      maxLife: 1.0,
+      color,
+      size: (2 + Math.random() * 3) * sizeMul,
+    });
   }
 }
 
@@ -599,300 +585,307 @@ function update(dt) {
 function render() {
   ctx.clearRect(0, 0, W, H);
 
-  // Ground (parking lot tiles) — drawn in world space relative to camera
-  ctx.fillStyle = "#1a1a1a";
+  // Sky-ish grass background
+  ctx.fillStyle = "#6db96d";
   ctx.fillRect(0, 0, W, H);
 
   ctx.save();
   ctx.translate(-cam.x, -cam.y);
 
-  // Floor pattern
+  // Grass pattern
   const startX = Math.floor(cam.x / TILE) * TILE;
   const startY = Math.floor(cam.y / TILE) * TILE;
-  ctx.strokeStyle = "#222";
-  ctx.lineWidth = 1;
   for (let x = startX; x < cam.x + W + TILE; x += TILE) {
-    ctx.beginPath();
-    ctx.moveTo(x, cam.y);
-    ctx.lineTo(x, cam.y + H);
-    ctx.stroke();
-  }
-  for (let y = startY; y < cam.y + H + TILE; y += TILE) {
-    ctx.beginPath();
-    ctx.moveTo(cam.x, y);
-    ctx.lineTo(cam.x + W, y);
-    ctx.stroke();
-  }
-
-  // Walls
-  for (const w of walls) {
-    ctx.fillStyle = "#3a3a3a";
-    ctx.fillRect(w.x, w.y, w.w, w.h);
-    ctx.strokeStyle = "#555";
-    ctx.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1);
+    for (let y = startY; y < cam.y + H + TILE; y += TILE) {
+      const checker = ((x / TILE) + (y / TILE)) % 2 === 0;
+      ctx.fillStyle = checker ? "#6db96d" : "#65b065";
+      ctx.fillRect(x, y, TILE, TILE);
+      // Grass tufts
+      ctx.fillStyle = "#4a8a4a";
+      const seed = (x * 31 + y * 17) % 7;
+      if (seed < 3) {
+        ctx.fillRect(x + 10 + seed * 4, y + 20, 2, 6);
+        ctx.fillRect(x + 14 + seed * 4, y + 22, 2, 4);
+      }
+    }
   }
 
-  // Weapon pickup
-  if (!weaponPickup.picked) {
+  // Bushes / hedges
+  for (const b of bushes) {
+    ctx.fillStyle = "#2d5a2d";
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.fillStyle = "#3d7a3d";
+    ctx.fillRect(b.x + 4, b.y + 4, b.w - 8, b.h - 8);
+    // Bumpy top
+    ctx.fillStyle = "#4a9a4a";
+    for (let bx = b.x + 6; bx < b.x + b.w; bx += 10) {
+      ctx.beginPath();
+      ctx.arc(bx, b.y + 4, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Pickups: toilet paper
+  for (const tp of toiletPapers) {
+    if (tp.picked) continue;
+    const bob = Math.sin(performance.now() / 300 + tp.x) * 3;
     ctx.save();
-    ctx.translate(weaponPickup.x, weaponPickup.y);
-    const pulse = 0.6 + 0.4 * Math.sin(performance.now() / 200);
-    ctx.fillStyle = `rgba(220,220,160,${pulse})`;
+    ctx.translate(tp.x, tp.y + bob);
+    // roll
+    ctx.fillStyle = "#fff";
     ctx.beginPath();
-    ctx.arc(0, 0, 14, 0, Math.PI * 2);
+    ctx.arc(0, 0, 11, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#222";
-    ctx.fillRect(-7, -2, 14, 5);
-    ctx.fillRect(-3, 2, 4, 6);
+    ctx.strokeStyle = "#aaa";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // hole
+    ctx.fillStyle = "#8b7355";
+    ctx.beginPath();
+    ctx.arc(0, 0, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // hanging sheet
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(8, -2, 8, 14);
+    ctx.strokeStyle = "#ddd";
+    ctx.strokeRect(8, -2, 8, 14);
     ctx.restore();
   }
 
-  // Phone booth
-  ctx.fillStyle = calledPolice ? "#225522" : "#2a3a55";
-  ctx.fillRect(phoneBooth.x, phoneBooth.y, phoneBooth.w, phoneBooth.h);
-  ctx.strokeStyle = "#88aaff";
-  ctx.strokeRect(phoneBooth.x + 0.5, phoneBooth.y + 0.5, phoneBooth.w - 1, phoneBooth.h - 1);
-  ctx.fillStyle = "#88aaff";
-  ctx.fillRect(phoneBooth.x + 8, phoneBooth.y + 10, phoneBooth.w - 16, 20);
-  // Glow
-  if (!calledPolice) {
-    ctx.fillStyle = "rgba(120,160,255,0.15)";
+  // Pickups: plungers
+  for (const pl of plungers) {
+    if (pl.picked) continue;
+    const bob = Math.sin(performance.now() / 250 + pl.x) * 3;
+    ctx.save();
+    ctx.translate(pl.x, pl.y + bob);
+    // handle
+    ctx.fillStyle = "#8b4513";
+    ctx.fillRect(-2, -16, 4, 18);
+    // cup
+    ctx.fillStyle = "#cc3333";
     ctx.beginPath();
-    ctx.arc(phoneBooth.x + phoneBooth.w / 2, phoneBooth.y + phoneBooth.h / 2, 70, 0, Math.PI * 2);
+    ctx.ellipse(0, 4, 11, 7, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.fillStyle = "#aa2222";
+    ctx.beginPath();
+    ctx.ellipse(0, 6, 9, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
-  // Bullets
-  for (const b of bullets) {
-    ctx.fillStyle = "#ffcc66";
+  // Particles (behind player/toilet)
+  for (const p of particles) {
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = Math.max(0, Math.min(1, p.life));
     ctx.beginPath();
-    ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
     ctx.fill();
+    ctx.globalAlpha = 1;
   }
-
-  // Demon (draw before darkness mask so flashlight reveals)
-  drawDemon();
 
   // Player
   drawPlayer();
 
-  // Police cars approaching after call
-  if (calledPolice) {
-    const t = Math.min(1, policeTimer / 12);
-    const carX = phoneBooth.x - 200 + t * 180;
-    const carY = phoneBooth.y - 60;
-    drawPoliceCar(carX, carY, t);
-    drawPoliceCar(carX - 100, carY + 40, t);
-  }
+  // Toilets
+  for (const t of toilets) drawToilet(t);
 
   ctx.restore();
 
-  // Darkness overlay using "destination-out" trick: draw black, then cut out flashlight cone
-  drawDarkness();
-
-  // Hit flash
-  if (player.invuln > 0 && state === "play") {
-    ctx.fillStyle = `rgba(180,0,0,${player.invuln * 0.4})`;
-    ctx.fillRect(0, 0, W, H);
-  }
-
-  updateHud();
+  drawHud();
 }
 
 function drawPlayer() {
   ctx.save();
   ctx.translate(player.x, player.y);
-  // Pizza box behind back when no weapon
-  if (!player.hasWeapon) {
-    ctx.save();
-    ctx.rotate(player.angle + Math.PI);
-    ctx.fillStyle = "#cc8844";
-    ctx.fillRect(-10, -10, 20, 20);
-    ctx.strokeStyle = "#553311";
-    ctx.strokeRect(-10, -10, 20, 20);
-    ctx.fillStyle = "#553311";
-    ctx.fillRect(-8, -1, 16, 2);
-    ctx.restore();
-  }
-  ctx.rotate(player.angle);
-  // body
-  ctx.fillStyle = player.invuln > 0 && Math.floor(player.invuln * 10) % 2 ? "#990000" : "#cc2222";
+  ctx.rotate(player.angle + Math.PI / 2);
+  // Shadow
+  ctx.fillStyle = "rgba(0,0,0,0.3)";
   ctx.beginPath();
-  ctx.arc(0, 0, player.r, 0, Math.PI * 2);
+  ctx.ellipse(0, 14, 12, 5, 0, 0, Math.PI * 2);
   ctx.fill();
-  // cap
-  ctx.fillStyle = "#222";
-  ctx.fillRect(-6, -player.r - 2, 12, 4);
-  // arms / weapon
-  if (player.hasWeapon) {
-    ctx.fillStyle = "#222";
-    ctx.fillRect(8, -2, 12, 4);
-  } else {
-    ctx.fillStyle = "#cc2222";
-    ctx.fillRect(6, -3, 8, 6);
-  }
+
+  // Legs (animated walk)
+  const legSwing = Math.sin(player.walkPhase) * 5;
+  ctx.fillStyle = "#3a3a8a";
+  ctx.fillRect(-7, 6 + legSwing, 5, 10);
+  ctx.fillRect(2, 6 - legSwing, 5, 10);
+
+  // Body
+  ctx.fillStyle = "#ffcc66";
+  ctx.fillRect(-9, -8, 18, 16);
+  // Shirt
+  ctx.fillStyle = "#22aa44";
+  ctx.fillRect(-9, -4, 18, 12);
+
+  // Arms
+  const armSwing = Math.sin(player.walkPhase) * 4;
+  ctx.fillStyle = "#22aa44";
+  ctx.fillRect(-12, -3 - armSwing, 4, 9);
+  ctx.fillRect(8, -3 + armSwing, 4, 9);
+
+  // Head
+  ctx.fillStyle = "#ffd9a3";
+  ctx.beginPath();
+  ctx.arc(0, -12, 7, 0, Math.PI * 2);
+  ctx.fill();
+  // Hair
+  ctx.fillStyle = "#3a2a1a";
+  ctx.fillRect(-7, -19, 14, 4);
+
+  // Eyes (looking forward in rotation direction)
+  ctx.fillStyle = "#000";
+  ctx.fillRect(-3, -13, 2, 2);
+  ctx.fillRect(1, -13, 2, 2);
+
+  // Scared mouth
+  ctx.fillStyle = "#660000";
+  ctx.beginPath();
+  ctx.arc(0, -9, 2, 0, Math.PI * 2);
+  ctx.fill();
+
   ctx.restore();
 }
 
-function drawDemon() {
+function drawToilet(t) {
   ctx.save();
-  ctx.translate(demon.x, demon.y);
-  // shadow aura
-  const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 40);
-  grad.addColorStop(0, "rgba(120,0,0,0.5)");
-  grad.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(0, 0, 40, 0, Math.PI * 2);
-  ctx.fill();
-  // body
-  ctx.fillStyle = demon.stun > 0 ? "#552222" : "#220000";
-  ctx.beginPath();
-  ctx.arc(0, 0, demon.r, 0, Math.PI * 2);
-  ctx.fill();
-  // horns
-  ctx.fillStyle = "#111";
-  ctx.beginPath();
-  ctx.moveTo(-8, -demon.r);
-  ctx.lineTo(-12, -demon.r - 10);
-  ctx.lineTo(-4, -demon.r - 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(8, -demon.r);
-  ctx.lineTo(12, -demon.r - 10);
-  ctx.lineTo(4, -demon.r - 2);
-  ctx.fill();
-  // eyes
-  const eyePulse = 0.7 + 0.3 * Math.sin(performance.now() / 120);
-  ctx.fillStyle = `rgba(255,${demon.stun > 0 ? 100 : 30},0,${eyePulse})`;
-  ctx.beginPath();
-  ctx.arc(-5, -2, 3, 0, Math.PI * 2);
-  ctx.arc(5, -2, 3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
+  ctx.translate(t.x, t.y);
 
-function drawPoliceCar(x, y, t) {
+  // Shadow
+  ctx.fillStyle = "rgba(0,0,0,0.4)";
+  ctx.beginPath();
+  ctx.ellipse(0, 18, 22, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Toilet base (tank in back, bowl in front)
+  ctx.rotate(t.angle + Math.PI / 2);
+
+  // Tank
+  ctx.fillStyle = "#e8e8e8";
+  ctx.fillRect(-14, 4, 28, 14);
+  ctx.strokeStyle = "#888";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(-14, 4, 28, 14);
+  // Flush button
+  ctx.fillStyle = "#aaa";
+  ctx.fillRect(-3, 6, 6, 3);
+
+  // Bowl
+  ctx.fillStyle = "#f0f0f0";
+  ctx.beginPath();
+  ctx.ellipse(0, -4, 18, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#888";
+  ctx.stroke();
+  // Water
+  ctx.fillStyle = "#5577aa";
+  ctx.beginPath();
+  ctx.ellipse(0, -4, 13, 9, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Seat rim
+  ctx.strokeStyle = "#666";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(0, -4, 18, 14, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // The head popping out (bobbing)
+  const bob = Math.sin(t.bobPhase) * 4;
   ctx.save();
-  ctx.translate(x, y);
-  ctx.fillStyle = "#1a1a55";
-  ctx.fillRect(-25, -12, 50, 24);
+  ctx.translate(0, -6 + bob);
+
+  // Neck
+  ctx.fillStyle = "#ffd9a3";
+  ctx.fillRect(-4, 0, 8, 6);
+
+  // Head
+  ctx.fillStyle = "#ffd9a3";
+  ctx.beginPath();
+  ctx.arc(0, -6, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#aa7755";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Wild hair
+  ctx.fillStyle = "#1a1a1a";
+  for (let i = -8; i <= 8; i += 4) {
+    ctx.beginPath();
+    ctx.moveTo(i, -14);
+    ctx.lineTo(i - 1, -19);
+    ctx.lineTo(i + 2, -14);
+    ctx.fill();
+  }
+
+  // Crazy eyes
   ctx.fillStyle = "#fff";
-  ctx.fillRect(-25, -2, 50, 4);
-  // flashing lights
-  const phase = Math.floor(performance.now() / 200) % 2;
-  ctx.fillStyle = phase ? "#ff3030" : "#3030ff";
-  ctx.fillRect(-8, -14, 16, 4);
-  // headlight cone
-  ctx.fillStyle = "rgba(255,255,200,0.15)";
   ctx.beginPath();
-  ctx.moveTo(25, 0);
-  ctx.lineTo(150, -40);
-  ctx.lineTo(150, 40);
+  ctx.arc(-3, -7, 3, 0, Math.PI * 2);
+  ctx.arc(3, -7, 3, 0, Math.PI * 2);
   ctx.fill();
+  ctx.fillStyle = "#000";
+  const eyeShift = Math.sin(performance.now() / 200) * 1;
+  ctx.beginPath();
+  ctx.arc(-3 + eyeShift, -7, 1.5, 0, Math.PI * 2);
+  ctx.arc(3 + eyeShift, -7, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Singing mouth — opens and closes
+  const mouthOpen = (Math.sin(t.bobPhase * 1.5) + 1) * 3 + 1;
+  ctx.fillStyle = "#220000";
+  ctx.beginPath();
+  ctx.ellipse(0, -2, 4, mouthOpen, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ff6666";
+  ctx.beginPath();
+  ctx.ellipse(0, -1, 2, mouthOpen * 0.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Teeth
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(-3, -3, 6, 1.5);
+
+  ctx.restore();
   ctx.restore();
 }
 
-function drawDarkness() {
-  // Build the dark layer with the flashlight cone cut out.
-  const dctx = ctx;
-  // Off-screen composite onto a separate canvas? Simpler: draw black, then use destination-out with the cone.
-  dctx.save();
-  dctx.fillStyle = "rgba(0,0,0,0.92)";
-  dctx.fillRect(0, 0, W, H);
-  // Cut out flashlight cone using destination-out
-  dctx.globalCompositeOperation = "destination-out";
-  const sx = player.x - cam.x;
-  const sy = player.y - cam.y;
-  const range = player.flashlight.range;
-  const cone = player.flashlight.cone;
-  // Use a radial gradient for soft falloff
-  const fg = dctx.createRadialGradient(sx, sy, 10, sx, sy, range);
-  fg.addColorStop(0, "rgba(0,0,0,1)");
-  fg.addColorStop(0.5, "rgba(0,0,0,0.85)");
-  fg.addColorStop(1, "rgba(0,0,0,0)");
-  dctx.fillStyle = fg;
-  dctx.beginPath();
-  dctx.moveTo(sx, sy);
-  dctx.arc(sx, sy, range, player.angle - cone, player.angle + cone);
-  dctx.closePath();
-  dctx.fill();
-
-  // small ambient circle around player
-  const ag = dctx.createRadialGradient(sx, sy, 0, sx, sy, 60);
-  ag.addColorStop(0, "rgba(0,0,0,0.9)");
-  ag.addColorStop(1, "rgba(0,0,0,0)");
-  dctx.fillStyle = ag;
-  dctx.beginPath();
-  dctx.arc(sx, sy, 60, 0, Math.PI * 2);
-  dctx.fill();
-
-  dctx.globalCompositeOperation = "source-over";
-
-  // Faint flashlight beam tint
-  dctx.save();
-  dctx.globalCompositeOperation = "lighter";
-  const beam = dctx.createRadialGradient(sx, sy, 10, sx, sy, range);
-  beam.addColorStop(0, "rgba(255,240,180,0.18)");
-  beam.addColorStop(1, "rgba(255,240,180,0)");
-  dctx.fillStyle = beam;
-  dctx.beginPath();
-  dctx.moveTo(sx, sy);
-  dctx.arc(sx, sy, range, player.angle - cone, player.angle + cone);
-  dctx.closePath();
-  dctx.fill();
-  dctx.restore();
-
-  dctx.restore();
-}
-
-function updateHud() {
-  const ammoText = player.hasWeapon ? `Munition: ${player.ammo}/6` : "Keine Waffe";
-  const hpDots = "♥".repeat(player.hp) + "·".repeat(Math.max(0, 3 - player.hp));
-  let phoneLine = "";
-  if (calledPolice) {
-    const eta = Math.max(0, 12 - policeTimer).toFixed(1);
-    phoneLine = `<span style="color:#88aaff">Polizei unterwegs — ETA ${eta}s</span>`;
-  } else {
-    const distToPhone = Math.hypot(player.x - (phoneBooth.x + 25), player.y - (phoneBooth.y + 40));
-    phoneLine = `Telefonzelle: ${Math.round(distToPhone)}m`;
-  }
-  const sprint = Math.round((player.sprintLeft / player.sprintMax) * 100);
+function drawHud() {
+  const time = survivalTime.toFixed(1);
+  const sprintPct = Math.round((player.sprintLeft / player.sprintMax) * 100);
+  const sprintBar = "█".repeat(Math.round(sprintPct / 10)) + "░".repeat(10 - Math.round(sprintPct / 10));
   hud.innerHTML = `
-    <div style="color:#cc2222">${hpDots}</div>
-    <div>${ammoText}</div>
-    <div>Sprint: ${sprint}%</div>
-    <div>${phoneLine}</div>
+    <div>⏱️ ZEIT: ${time}s</div>
+    <div>💩 PUNKTE: ${score}</div>
+    <div>⚡ SPRINT: ${sprintBar}</div>
+    <div>🚽 TOILETTEN: ${toilets.length}</div>
+    ${bestTime > 0 ? `<div style="color:#ffe14a">🏆 REKORD: ${bestTime.toFixed(1)}s</div>` : ""}
   `;
 }
 
 // --- End screens ---
 function showDead() {
+  state = "dead";
+  if (survivalTime > bestTime) {
+    bestTime = survivalTime;
+    localStorage.setItem("skibidi_best", bestTime.toString());
+  }
+  overlay.classList.remove("start");
   overlay.innerHTML = `
-    <h1 style="color:#660000">TOT</h1>
-    <h2>Bestellung wurde abgeschlossen.</h2>
-    <p>Der Dämon hat seine Lieferung erhalten.<br>Du.</p>
-    <button id="restartBtn">NOCH EINMAL</button>
+    <h1 style="color:#8b4513">ANGEKACKT! 💩</h1>
+    <h2>Du wurdest erwischt.</h2>
+    <p>
+      Der Skibidi Toilet hat dich geschnappt<br>
+      und gnadenlos angekackt.<br><br>
+      <b>Überlebt:</b> ${survivalTime.toFixed(1)} Sekunden<br>
+      <b>Punkte:</b> ${score}<br>
+      ${survivalTime >= bestTime ? '<span style="color:#ffe14a">🏆 NEUER REKORD!</span><br>' : `Bestzeit: ${bestTime.toFixed(1)}s<br>`}
+    </p>
+    <button id="restartBtn">NOCHMAL FLIEHEN</button>
   `;
   overlay.classList.remove("hidden");
   document.getElementById("restartBtn").addEventListener("click", () => {
     overlay.classList.add("hidden");
-    resetGame();
-  });
-}
-function showWin() {
-  overlay.innerHTML = `
-    <h1 style="color:#88aaff">GERETTET</h1>
-    <h2>Die Polizei ist da.</h2>
-    <p>Die Sirenen schneiden durch die Nacht.<br>
-    Du wirfst einen letzten Blick zurück — die Tür steht offen,<br>
-    die Pizza liegt unangetastet auf der Schwelle.<br>
-    Niemand bestellt um drei Uhr morgens, ohne einen Grund.</p>
-    <button id="restartBtn">NEUE SCHICHT</button>
-  `;
-  overlay.classList.remove("hidden");
-  document.getElementById("restartBtn").addEventListener("click", () => {
-    overlay.classList.add("hidden");
+    poopOverlay.classList.remove("active");
     resetGame();
   });
 }
@@ -906,7 +899,6 @@ function loop(ts) {
   requestAnimationFrame(loop);
 }
 
-// Resize canvas to fit window while keeping aspect
 function fit() {
   const ratio = W / H;
   const ww = window.innerWidth;
@@ -925,7 +917,6 @@ startBtn.addEventListener("click", () => {
   resetGame();
 });
 
-// Initial build so the title screen has a backdrop too
 buildWorld();
 requestAnimationFrame(loop);
 </script>
