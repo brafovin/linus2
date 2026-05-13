@@ -2,16 +2,17 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8" />
-<title>Last Delivery</title>
+<title>Grandma's House - Horror Escape</title>
 <style>
   html, body {
     margin: 0;
     padding: 0;
     background: #000;
-    color: #d8d8d8;
+    color: #ddd;
     font-family: "Courier New", monospace;
     overflow: hidden;
     height: 100%;
+    user-select: none;
   }
   #game {
     display: block;
@@ -27,24 +28,63 @@
     font-size: 14px;
     text-shadow: 0 0 4px #000, 0 0 8px #000;
     pointer-events: none;
-    user-select: none;
-    line-height: 1.4em;
+    line-height: 1.5em;
   }
-  #subtitle {
+  #hud .label { color: #888; }
+  #hud .val   { color: #c33; font-weight: bold; }
+  #inv {
     position: fixed;
-    bottom: 30px;
+    bottom: 10px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 18px;
+    display: flex;
+    gap: 6px;
+    pointer-events: none;
+  }
+  .slot {
+    width: 56px;
+    height: 56px;
+    border: 2px solid #444;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #ddd;
+    text-align: center;
+    line-height: 1.1em;
+  }
+  .slot.active { border-color: #c33; box-shadow: 0 0 12px #500; }
+  #msg {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 16px;
     text-align: center;
     text-shadow: 0 0 6px #000;
     pointer-events: none;
-    user-select: none;
     max-width: 80%;
     opacity: 0;
-    transition: opacity 0.4s;
+    transition: opacity 0.3s;
+    color: #ddd;
   }
-  #subtitle.show { opacity: 1; }
+  #msg.show { opacity: 1; }
+  #hint {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.85);
+    border: 1px solid #c33;
+    padding: 12px 20px;
+    font-size: 14px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    text-align: center;
+  }
+  #hint.show { opacity: 1; }
   #overlay {
     position: fixed;
     inset: 0;
@@ -55,16 +95,13 @@
     justify-content: center;
     text-align: center;
     z-index: 10;
-    transition: opacity 0.8s;
+    transition: opacity 0.6s;
   }
-  #overlay.hidden {
-    opacity: 0;
-    pointer-events: none;
-  }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
   #overlay h1 {
-    font-size: 42px;
+    font-size: 48px;
     margin: 0 0 10px 0;
-    color: #b00000;
+    color: #b00;
     letter-spacing: 6px;
     text-shadow: 0 0 8px #500, 0 0 24px #200;
   }
@@ -72,862 +109,1155 @@
     font-size: 20px;
     margin: 0 0 30px 0;
     color: #888;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
   }
   #overlay p {
-    max-width: 500px;
+    max-width: 540px;
     line-height: 1.6em;
     color: #aaa;
     font-size: 14px;
+    margin: 6px 0;
+  }
+  #overlay .controls {
+    margin-top: 20px;
+    color: #777;
+    font-size: 13px;
   }
   #overlay button {
-    margin-top: 20px;
+    margin-top: 24px;
     background: #1a1a1a;
-    border: 1px solid #b00000;
-    color: #d8d8d8;
+    border: 1px solid #b00;
+    color: #ddd;
     padding: 12px 28px;
     font-family: inherit;
     font-size: 16px;
     cursor: pointer;
     letter-spacing: 3px;
   }
-  #overlay button:hover {
-    background: #2a0000;
-    color: #ff5555;
-  }
-  .key { color: #b00000; }
+  #overlay button:hover { background: #2a0000; color: #f55; }
+  .key { color: #c33; }
   #vignette {
     position: fixed;
     inset: 0;
     pointer-events: none;
-    box-shadow: inset 0 0 200px 60px #000;
+    box-shadow: inset 0 0 200px 60px rgba(0,0,0,0.9);
     z-index: 5;
+  }
+  #bloodflash {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle, rgba(180,0,0,0.0) 50%, rgba(120,0,0,0.5) 100%);
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 6;
+  }
+  #bloodflash.hit { opacity: 1; }
+  #day {
+    position: fixed;
+    top: 10px;
+    right: 14px;
+    font-size: 14px;
+    text-shadow: 0 0 4px #000;
+    color: #c33;
+    text-align: right;
+    line-height: 1.5em;
   }
 </style>
 </head>
 <body>
-<canvas id="game" width="960" height="600"></canvas>
-<div id="hud"></div>
-<div id="subtitle"></div>
+<canvas id="game" width="960" height="640"></canvas>
 <div id="vignette"></div>
+<div id="bloodflash"></div>
+<div id="hud">
+  <div><span class="label">HP:</span> <span id="hpVal" class="val">100</span></div>
+  <div><span class="label">NOISE:</span> <span id="noiseVal" class="val">0</span></div>
+  <div><span class="label">STAMINA:</span> <span id="stamVal" class="val">100</span></div>
+</div>
+<div id="day">
+  <div>DAY <span id="dayVal">1</span> / 5</div>
+  <div id="timeVal" style="color:#888;font-size:12px"></div>
+</div>
+<div id="inv"></div>
+<div id="hint"></div>
+<div id="msg"></div>
 
 <div id="overlay">
-  <h1>LAST DELIVERY</h1>
-  <h2>Bestellung #616</h2>
-  <p>
-    Du bist Pizzalieferant. Letzte Lieferung der Nacht.<br>
-    Der Kunde hat dich erwartet... aber das ist <i>kein Mensch</i>.<br><br>
-    <span class="key">WASD</span> bewegen &nbsp;
-    <span class="key">MAUS</span> Taschenlampe zielen<br>
-    <span class="key">LMB</span> schießen (sobald Waffe gefunden)<br>
-    <span class="key">E</span> Telefon benutzen<br>
-    <span class="key">SHIFT</span> sprinten (kurz)
-  </p>
-  <button id="startBtn">FLIEHEN</button>
+  <h1>GRANDMA'S HOUSE</h1>
+  <h2>YOU HAVE 5 DAYS</h2>
+  <p>Du bist in Großmutters Haus eingesperrt. Sie ist <span class="key">nicht mehr menschlich</span>.</p>
+  <p>Finde alle Teile, um die Haupttür zu öffnen und zu fliehen.</p>
+  <p>Mach <span class="key">keinen Lärm</span>. Sie hört alles.</p>
+  <p>Wenn sie dich erwischt: -1 Tag. Wenn dir die Tage ausgehen: <span class="key">du stirbst</span>.</p>
+  <div class="controls">
+    [WASD] Bewegen &nbsp;·&nbsp; [SHIFT] Rennen (laut!) &nbsp;·&nbsp; [STRG] Schleichen<br>
+    [E] Interagieren / Aufheben &nbsp;·&nbsp; [F] Verstecken &nbsp;·&nbsp; [1-6] Item wählen<br>
+    [LMB] Item benutzen &nbsp;·&nbsp; [Q] Item ablegen
+  </div>
+  <button id="startBtn">START</button>
 </div>
 
 <script>
 "use strict";
 
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-const hud = document.getElementById("hud");
-const subtitleEl = document.getElementById("subtitle");
-const overlay = document.getElementById("overlay");
-const startBtn = document.getElementById("startBtn");
+// ---------- Canvas ----------
+const cvs = document.getElementById('game');
+const ctx = cvs.getContext('2d');
+const W = cvs.width, H = cvs.height;
+ctx.imageSmoothingEnabled = false;
 
-const W = canvas.width;
-const H = canvas.height;
+// ---------- UI ----------
+const hpEl = document.getElementById('hpVal');
+const noiseEl = document.getElementById('noiseVal');
+const stamEl = document.getElementById('stamVal');
+const dayEl = document.getElementById('dayVal');
+const timeEl = document.getElementById('timeVal');
+const invEl = document.getElementById('inv');
+const msgEl = document.getElementById('msg');
+const hintEl = document.getElementById('hint');
+const overlay = document.getElementById('overlay');
+const startBtn = document.getElementById('startBtn');
+const bloodflash = document.getElementById('bloodflash');
 
-// World is bigger than the screen.
-const WORLD_W = 2400;
-const WORLD_H = 1800;
-const TILE = 40;
+let msgTimer = 0;
+function showMsg(text, dur = 2500) {
+  msgEl.textContent = text;
+  msgEl.classList.add('show');
+  msgTimer = dur;
+}
+function hideMsg() { msgEl.classList.remove('show'); }
 
-const keys = {};
-const mouse = { x: W / 2, y: H / 2, down: false };
+// ---------- World ----------
+// Tile size in pixels for rendering
+const TS = 32;
+// Map: 0 floor, 1 wall, 2 door (locked initially), 3 carpet, 4 outside (exit area)
+//      5 bed (hideable), 6 wardrobe (hideable), 7 table, 8 toilet, 9 sink,
+//     10 stairs, 11 kitchen tile, 12 grass (outside), 13 window
+// Layout: ground floor 30x20
+const MAP_W = 30, MAP_H = 20;
+// 0 floor, 1 wall, 2 main exit door (needs key parts), 3 inner door (locked, breakable),
+// 5 bed, 6 wardrobe, 7 table, 8 toilet, 9 sink, 11 kitchen, 12 grass, 13 window
+const M = [
+  "111111111111111111111111111111",
+  "1ggggg1.......1.........1ggg21",
+  "1ggggg1...77..1....55...1ggg.1",
+  "1ggggg1.......3.........1ggg.1",
+  "1ggggg1.......1.........1ggg.1",
+  "1ggggg1111311111133111111ggg.1",
+  "1ggggg1.....1..........1ggggg1",
+  "1ggggg1.....1...6.6.6..1ggggg1",
+  "1ggggg3.....1..........3ggggg1",
+  "1ggggg1.kkk.1...77.....1ggggg1",
+  "1ggggg1.kkk.1...77.....1ggggg1",
+  "1ggggg1.kkk.111133111113ggggg1",
+  "1ggggg1.....1.....1..........1",
+  "1ggggg1.....1.89..1...77.....1",
+  "1ggggg1.....3.....1..........1",
+  "1ggggg1.....1.....1...66.....1",
+  "1ggggg1.....1.....3..........1",
+  "1ggggg1.....1.....1..........1",
+  "1ggggg1111111111111111111111.1",
+  "111111111111111111111111111111",
+];
+// Note: '.' = floor; we'll convert. Symbols: g=grass(outside), k=kitchen tile,
+// 2 = main exit (north-east area), bottom right '.1' near corner exit not exposed.
+// Let's redo more carefully below in JS.
 
-addEventListener("keydown", e => {
-  keys[e.key.toLowerCase()] = true;
-  if (e.key === " ") e.preventDefault();
-});
-addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
-canvas.addEventListener("mousemove", e => {
-  const r = canvas.getBoundingClientRect();
-  mouse.x = (e.clientX - r.left) * (canvas.width / r.width);
-  mouse.y = (e.clientY - r.top) * (canvas.height / r.height);
-});
-canvas.addEventListener("mousedown", () => { mouse.down = true; });
-canvas.addEventListener("mouseup", () => { mouse.down = false; });
+// Build tile grid
+const TILE_FLOOR=0, TILE_WALL=1, TILE_EXIT=2, TILE_DOOR=3,
+      TILE_BED=5, TILE_WARDROBE=6, TILE_TABLE=7, TILE_TOILET=8, TILE_SINK=9,
+      TILE_KITCHEN=11, TILE_GRASS=12, TILE_WINDOW=13;
 
-// --- Audio (procedural) ---
-let audioCtx = null;
-function ensureAudio() {
-  if (!audioCtx) {
-    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
-    catch (e) { audioCtx = null; }
+const grid = [];
+for (let y = 0; y < MAP_H; y++) {
+  const row = [];
+  const src = M[y];
+  for (let x = 0; x < MAP_W; x++) {
+    const c = src[x];
+    let t = TILE_FLOOR;
+    if      (c === '1') t = TILE_WALL;
+    else if (c === '2') t = TILE_EXIT;
+    else if (c === '3') t = TILE_DOOR;
+    else if (c === '5') t = TILE_BED;
+    else if (c === '6') t = TILE_WARDROBE;
+    else if (c === '7') t = TILE_TABLE;
+    else if (c === '8') t = TILE_TOILET;
+    else if (c === '9') t = TILE_SINK;
+    else if (c === 'k') t = TILE_KITCHEN;
+    else if (c === 'g') t = TILE_GRASS;
+    else if (c === '.') t = TILE_FLOOR;
+    row.push(t);
   }
-}
-function beep(freq, dur, type = "sine", vol = 0.15) {
-  if (!audioCtx) return;
-  const t = audioCtx.currentTime;
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = type;
-  o.frequency.setValueAtTime(freq, t);
-  g.gain.setValueAtTime(vol, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g).connect(audioCtx.destination);
-  o.start(t);
-  o.stop(t + dur);
-}
-function gunshot() {
-  if (!audioCtx) return;
-  const t = audioCtx.currentTime;
-  const bufferSize = audioCtx.sampleRate * 0.25;
-  const buf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) {
-    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
-  }
-  const src = audioCtx.createBufferSource();
-  src.buffer = buf;
-  const g = audioCtx.createGain();
-  g.gain.setValueAtTime(0.4, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
-  const filter = audioCtx.createBiquadFilter();
-  filter.type = "lowpass";
-  filter.frequency.value = 1200;
-  src.connect(filter).connect(g).connect(audioCtx.destination);
-  src.start(t);
-}
-function demonGrowl() {
-  if (!audioCtx) return;
-  const t = audioCtx.currentTime;
-  const o = audioCtx.createOscillator();
-  const o2 = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = "sawtooth"; o2.type = "square";
-  o.frequency.setValueAtTime(70, t);
-  o.frequency.linearRampToValueAtTime(45, t + 0.8);
-  o2.frequency.setValueAtTime(73, t);
-  o2.frequency.linearRampToValueAtTime(48, t + 0.8);
-  g.gain.setValueAtTime(0.0, t);
-  g.gain.linearRampToValueAtTime(0.18, t + 0.1);
-  g.gain.linearRampToValueAtTime(0.0, t + 0.9);
-  o.connect(g); o2.connect(g); g.connect(audioCtx.destination);
-  o.start(t); o2.start(t); o.stop(t + 0.95); o2.stop(t + 0.95);
-}
-function policeSiren(duration = 4) {
-  if (!audioCtx) return;
-  const t0 = audioCtx.currentTime;
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = "square";
-  for (let i = 0; i < duration * 2; i++) {
-    o.frequency.setValueAtTime(i % 2 ? 720 : 480, t0 + i * 0.5);
-  }
-  g.gain.setValueAtTime(0.08, t0);
-  g.gain.linearRampToValueAtTime(0, t0 + duration);
-  o.connect(g).connect(audioCtx.destination);
-  o.start(t0); o.stop(t0 + duration);
+  grid.push(row);
 }
 
-// --- World generation ---
-// Walls: rectangles {x,y,w,h}
-let walls = [];
-let phoneBooth = null;
-let weaponPickup = null;
-let player, demon;
-
-function rectsOverlap(a, b) {
-  return a.x < b.x + b.w && a.x + a.w > b.x &&
-         a.y < b.y + b.h && a.y + a.h > b.y;
+function tileAt(tx, ty) {
+  if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return TILE_WALL;
+  return grid[ty][tx];
 }
-function pointInRect(px, py, r) {
-  return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
+function setTile(tx, ty, t) {
+  if (tx >= 0 && ty >= 0 && tx < MAP_W && ty < MAP_H) grid[ty][tx] = t;
 }
 
-function buildWorld() {
-  walls = [];
-  // outer border
-  walls.push({ x: 0, y: 0, w: WORLD_W, h: 20 });
-  walls.push({ x: 0, y: WORLD_H - 20, w: WORLD_W, h: 20 });
-  walls.push({ x: 0, y: 0, w: 20, h: WORLD_H });
-  walls.push({ x: WORLD_W - 20, y: 0, w: 20, h: WORLD_H });
+function isSolid(t) {
+  return t === TILE_WALL || t === TILE_DOOR || t === TILE_EXIT ||
+         t === TILE_TABLE || t === TILE_TOILET || t === TILE_SINK ||
+         t === TILE_BED || t === TILE_WARDROBE || t === TILE_WINDOW;
+}
+function isHideable(t) { return t === TILE_BED || t === TILE_WARDROBE; }
 
-  // Apartment block 1 (top-left) - where you started the delivery
-  walls.push({ x: 200, y: 200, w: 400, h: 30 });
-  walls.push({ x: 200, y: 200, w: 30, h: 250 });
-  walls.push({ x: 570, y: 200, w: 30, h: 100 });
-  walls.push({ x: 570, y: 350, w: 30, h: 100 });
-  walls.push({ x: 200, y: 420, w: 200, h: 30 });
-  walls.push({ x: 470, y: 420, w: 130, h: 30 });
-  // interior wall
-  walls.push({ x: 350, y: 230, w: 30, h: 100 });
+// ---------- Items ----------
+// Item definitions: needed parts for main exit door, plus tools and consumables
+const ITEM_DEFS = {
+  key_main:  { name: "Hauptschlüssel", color: "#e6c64c", glyph: "K" },
+  cog:       { name: "Zahnrad",        color: "#bbb",    glyph: "*" },
+  fuse:      { name: "Sicherung",      color: "#88f",    glyph: "F" },
+  code:      { name: "Codezettel",     color: "#fff",    glyph: "C" },
+  hammer:    { name: "Hammer",         color: "#d88",    glyph: "H" },
+  screwdriver:{name: "Schraubenz.",    color: "#aaf",    glyph: "S" },
+  painkill:  { name: "Schmerzmittel",  color: "#f88",    glyph: "+" },
+  battery:   { name: "Batterie",       color: "#5d5",    glyph: "B" },
+  taser:     { name: "Elektroschocker",color: "#5cf",    glyph: "Z" },
+};
 
-  // Random crates / cars scattered
-  const decor = [
-    { x: 800, y: 350, w: 80, h: 40 },
-    { x: 950, y: 500, w: 120, h: 60 },
-    { x: 1200, y: 250, w: 60, h: 60 },
-    { x: 1400, y: 600, w: 200, h: 40 },
-    { x: 1700, y: 400, w: 40, h: 200 },
-    { x: 900, y: 900, w: 220, h: 50 },
-    { x: 1300, y: 1000, w: 60, h: 60 },
-    { x: 1500, y: 1100, w: 40, h: 180 },
-    { x: 600, y: 1300, w: 250, h: 40 },
-    { x: 250, y: 900, w: 60, h: 60 },
-    { x: 350, y: 1100, w: 200, h: 30 },
-    { x: 1850, y: 800, w: 50, h: 50 },
-    { x: 2000, y: 1100, w: 250, h: 40 },
-    { x: 2100, y: 1300, w: 30, h: 200 },
-    { x: 1100, y: 1450, w: 300, h: 40 },
-    { x: 1700, y: 1500, w: 60, h: 60 },
-    { x: 400, y: 1500, w: 60, h: 60 },
-    { x: 800, y: 700, w: 30, h: 150 },
-  ];
-  for (const d of decor) walls.push(d);
-
-  // Phone booth at far side
-  phoneBooth = { x: WORLD_W - 200, y: WORLD_H - 250, w: 50, h: 80, used: false, charging: 0 };
-
-  // Weapon pickup roughly in middle
-  weaponPickup = { x: 1180, y: 820, picked: false };
-
-  // Player starts at apartment door
-  player = {
-    x: 480, y: 470,
-    r: 12,
-    speed: 130,
-    angle: 0,
-    hasWeapon: false,
-    ammo: 0,
-    sprintLeft: 2.0,
-    sprintMax: 2.0,
-    sprintRegen: 0.6,
-    hp: 3,
-    invuln: 0,
-    flashlight: { range: 280, cone: Math.PI / 5 }
-  };
-
-  // Demon spawns inside the apartment
-  demon = {
-    x: 380, y: 350,
-    r: 16,
-    speed: 95,
-    angle: 0,
-    stun: 0,
-    state: "stalk",
-    growlTimer: 2 + Math.random() * 3,
-  };
+// World items: spawned at tile coords (center)
+let worldItems = [];
+function placeItem(id, tx, ty) {
+  worldItems.push({ id, x: tx*TS + TS/2, y: ty*TS + TS/2, picked: false });
 }
 
-// Collision: move circle (player) against rectangles
-function moveCircle(ent, dx, dy) {
-  ent.x += dx;
-  for (const w of walls) {
-    if (circleRectOverlap(ent.x, ent.y, ent.r, w)) {
-      if (dx > 0) ent.x = w.x - ent.r;
-      else if (dx < 0) ent.x = w.x + w.w + ent.r;
-    }
-  }
-  ent.y += dy;
-  for (const w of walls) {
-    if (circleRectOverlap(ent.x, ent.y, ent.r, w)) {
-      if (dy > 0) ent.y = w.y - ent.r;
-      else if (dy < 0) ent.y = w.y + w.h + ent.r;
-    }
-  }
-}
-function circleRectOverlap(cx, cy, cr, r) {
-  const nx = Math.max(r.x, Math.min(cx, r.x + r.w));
-  const ny = Math.max(r.y, Math.min(cy, r.y + r.h));
-  const dx = cx - nx, dy = cy - ny;
-  return dx * dx + dy * dy < cr * cr;
+// Place items in rooms (chosen by hand)
+function spawnItems() {
+  worldItems = [];
+  // Required parts to escape: key_main, cog, fuse, code
+  placeItem('key_main',    9, 9);   // on kitchen counter
+  placeItem('cog',         16, 17); // bottom room
+  placeItem('fuse',        14, 13); // bathroom area near sink
+  placeItem('code',        20, 7);  // wardrobe room
+  // Tools
+  placeItem('hammer',      24, 14);
+  placeItem('screwdriver', 16, 3);
+  placeItem('taser',       24, 2);
+  // Consumables
+  placeItem('painkill',    7, 14);
+  placeItem('battery',     22, 17);
 }
 
-// Line-of-sight: does a line from (x1,y1) to (x2,y2) cross any wall?
-function losBlocked(x1, y1, x2, y2) {
-  for (const w of walls) {
-    if (lineRect(x1, y1, x2, y2, w)) return true;
+// ---------- Inventory ----------
+const INV_SIZE = 6;
+const inventory = new Array(INV_SIZE).fill(null);
+let invSelected = 0;
+
+function invAdd(id) {
+  for (let i = 0; i < INV_SIZE; i++) {
+    if (!inventory[i]) { inventory[i] = id; renderInv(); return true; }
   }
   return false;
 }
-function lineRect(x1, y1, x2, y2, r) {
-  return lineLine(x1, y1, x2, y2, r.x, r.y, r.x + r.w, r.y) ||
-         lineLine(x1, y1, x2, y2, r.x + r.w, r.y, r.x + r.w, r.y + r.h) ||
-         lineLine(x1, y1, x2, y2, r.x + r.w, r.y + r.h, r.x, r.y + r.h) ||
-         lineLine(x1, y1, x2, y2, r.x, r.y + r.h, r.x, r.y);
+function invHas(id) { return inventory.includes(id); }
+function invRemove(id) {
+  const i = inventory.indexOf(id);
+  if (i >= 0) { inventory[i] = null; renderInv(); return true; }
+  return false;
 }
-function lineLine(x1, y1, x2, y2, x3, y3, x4, y4) {
-  const d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-  if (Math.abs(d) < 1e-6) return false;
-  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / d;
-  const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / d;
-  return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+function invDropSelected() {
+  const id = inventory[invSelected];
+  if (!id) return;
+  placeItem(id, Math.floor(player.x/TS), Math.floor(player.y/TS));
+  inventory[invSelected] = null;
+  renderInv();
+  showMsg(`${ITEM_DEFS[id].name} abgelegt`, 1500);
 }
-
-// --- Subtitle queue ---
-let subtitleTimer = 0;
-function say(text, ms = 3500) {
-  subtitleEl.textContent = text;
-  subtitleEl.classList.add("show");
-  subtitleTimer = ms / 1000;
-}
-
-// --- Bullets ---
-let bullets = [];
-function fireBullet() {
-  if (!player.hasWeapon || player.ammo <= 0) return;
-  if (player.fireCD > 0) return;
-  player.ammo--;
-  player.fireCD = 0.35;
-  const ang = player.angle;
-  bullets.push({
-    x: player.x + Math.cos(ang) * 14,
-    y: player.y + Math.sin(ang) * 14,
-    vx: Math.cos(ang) * 800,
-    vy: Math.sin(ang) * 800,
-    life: 0.7,
-  });
-  gunshot();
+function renderInv() {
+  invEl.innerHTML = '';
+  for (let i = 0; i < INV_SIZE; i++) {
+    const s = document.createElement('div');
+    s.className = 'slot' + (i === invSelected ? ' active' : '');
+    const id = inventory[i];
+    if (id) {
+      const d = ITEM_DEFS[id];
+      s.innerHTML = `<span style="color:${d.color}">${d.glyph}</span><br><span style="font-size:9px">${d.name}</span>`;
+    } else {
+      s.innerHTML = `<span style="color:#444">${i+1}</span>`;
+    }
+    invEl.appendChild(s);
+  }
 }
 
-// --- Game state ---
-let state = "menu"; // menu, play, dead, win
-let policeTimer = 0; // counts up to 12s after call
-let calledPolice = false;
-let lastTime = 0;
-let cam = { x: 0, y: 0 };
-let screenShake = 0;
-let darkness = 1.0; // overall dark factor
-let demonHits = 0;
+// ---------- Player ----------
+const player = {
+  x: 4*TS, y: 14*TS,
+  r: 10,
+  speed: 90,        // px/s walking
+  hp: 100,
+  stamina: 100,
+  noise: 0,
+  hidden: false,
+  hideTile: null,
+  alive: true,
+};
 
-function resetGame() {
-  buildWorld();
-  bullets = [];
-  state = "play";
-  calledPolice = false;
-  policeTimer = 0;
-  screenShake = 0;
-  demonHits = 0;
-  player.fireCD = 0;
-  say("Ich liefere nur noch diese eine Pizza ab... was ist das für ein Geruch?", 4500);
+// Spawn point for new day
+function spawnPlayer() {
+  player.x = 4*TS + TS/2;
+  player.y = 14*TS + TS/2;
+  player.hidden = false;
+  player.hideTile = null;
 }
 
-// --- Update ---
+// ---------- Granny (AI) ----------
+const granny = {
+  x: 16*TS, y: 3*TS,
+  r: 11,
+  speed: 70,
+  hearRange: 7*TS,
+  sightRange: 6*TS,
+  state: 'patrol',  // patrol, investigate, chase, stunned
+  target: null,
+  stunTimer: 0,
+  path: [],
+  pathTimer: 0,
+  patrolPoints: [
+    {x:16, y:3}, {x:22, y:7}, {x:23, y:17}, {x:16, y:14}, {x:5, y:10}, {x:5, y:17}
+  ],
+  patrolIdx: 0,
+  attackCooldown: 0,
+};
+
+// ---------- A* Pathfinding ----------
+function aStar(sx, sy, gx, gy) {
+  // tile coords; treat doors and walls; doors solid for granny? Granny can break doors (we'll allow)
+  // We'll allow granny to walk through doors (they "open" for her).
+  const key = (x,y)=> x + "," + y;
+  const open = new Map();
+  const came = new Map();
+  const gScore = new Map();
+  const fScore = new Map();
+  const start = key(sx, sy);
+  gScore.set(start, 0);
+  fScore.set(start, Math.abs(sx-gx) + Math.abs(sy-gy));
+  open.set(start, {x:sx, y:sy, f: fScore.get(start)});
+  const closed = new Set();
+  let iters = 0;
+  while (open.size && iters++ < 2000) {
+    // pick lowest f
+    let bestK = null, bestF = Infinity;
+    for (const [k, v] of open) { if (v.f < bestF) { bestF = v.f; bestK = k; } }
+    const cur = open.get(bestK);
+    if (cur.x === gx && cur.y === gy) {
+      // reconstruct
+      const path = [];
+      let k = bestK;
+      while (came.has(k)) { const p = came.get(k); path.push(p.cur); k = p.from; }
+      return path.reverse();
+    }
+    open.delete(bestK);
+    closed.add(bestK);
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+    for (const [dx,dy] of dirs) {
+      const nx = cur.x + dx, ny = cur.y + dy;
+      const nk = key(nx, ny);
+      if (closed.has(nk)) continue;
+      const t = tileAt(nx, ny);
+      if (t === TILE_WALL || t === TILE_TABLE || t === TILE_SINK || t === TILE_TOILET
+          || t === TILE_BED || t === TILE_WARDROBE || t === TILE_EXIT) continue;
+      const tentG = (gScore.get(bestK) ?? Infinity) + 1;
+      if (tentG < (gScore.get(nk) ?? Infinity)) {
+        came.set(nk, {from: bestK, cur: {x:nx, y:ny}});
+        gScore.set(nk, tentG);
+        const f = tentG + Math.abs(nx-gx) + Math.abs(ny-gy);
+        fScore.set(nk, f);
+        open.set(nk, {x:nx, y:ny, f});
+      }
+    }
+  }
+  return [];
+}
+
+// ---------- Collision ----------
+function moveEntity(e, dx, dy) {
+  // axis separated, simple AABB vs tile
+  const r = e.r;
+  // X
+  let nx = e.x + dx;
+  if (dx !== 0) {
+    const checkX = dx > 0 ? nx + r : nx - r;
+    const ys = [e.y - r + 1, e.y, e.y + r - 1];
+    let blocked = false;
+    for (const yy of ys) {
+      const tt = tileAt(Math.floor(checkX/TS), Math.floor(yy/TS));
+      if (isSolid(tt)) { blocked = true; break; }
+    }
+    if (!blocked) e.x = nx;
+  }
+  // Y
+  let ny = e.y + dy;
+  if (dy !== 0) {
+    const checkY = dy > 0 ? ny + r : ny - r;
+    const xs = [e.x - r + 1, e.x, e.x + r - 1];
+    let blocked = false;
+    for (const xx of xs) {
+      const tt = tileAt(Math.floor(xx/TS), Math.floor(checkY/TS));
+      if (isSolid(tt)) { blocked = true; break; }
+    }
+    if (!blocked) e.y = ny;
+  }
+}
+
+// ---------- Input ----------
+const keys = {};
+let mouseDown = false;
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'KeyE') tryInteract();
+  if (e.code === 'KeyF') tryHide();
+  if (e.code === 'KeyQ') invDropSelected();
+  if (e.code.startsWith('Digit')) {
+    const n = parseInt(e.code.slice(5),10) - 1;
+    if (n >= 0 && n < INV_SIZE) { invSelected = n; renderInv(); }
+  }
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+cvs.addEventListener('mousedown', e => {
+  if (e.button === 0) { mouseDown = true; useSelectedItem(); }
+});
+cvs.addEventListener('mouseup', e => { if (e.button === 0) mouseDown = false; });
+cvs.addEventListener('contextmenu', e => e.preventDefault());
+
+// ---------- Audio (WebAudio synth) ----------
+let audioCtx = null;
+function ac() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function blip(freq, dur, type='sine', vol=0.2) {
+  try {
+    const a = ac(); const o = a.createOscillator(); const g = a.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.value = vol;
+    o.connect(g); g.connect(a.destination);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+    o.stop(a.currentTime + dur + 0.05);
+  } catch (e) {}
+}
+function noiseBurst(dur=0.3, vol=0.15) {
+  try {
+    const a = ac();
+    const buf = a.createBuffer(1, a.sampleRate*dur, a.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1) * (1 - i/d.length);
+    const s = a.createBufferSource(); s.buffer = buf;
+    const g = a.createGain(); g.gain.value = vol;
+    s.connect(g); g.connect(a.destination); s.start();
+  } catch (e) {}
+}
+function heartbeat() {
+  // distance-based
+  const d = Math.hypot(granny.x - player.x, granny.y - player.y);
+  if (d < 8*TS) {
+    blip(60, 0.12, 'sine', 0.18);
+    setTimeout(()=>blip(50, 0.15, 'sine', 0.16), 140);
+  }
+}
+
+// ---------- Game state ----------
+let day = 1;
+let timeOfDay = 0; // 0..1 across day
+const DAY_DURATION = 180; // seconds per day
+let running = false;
+let lastT = 0;
+
+function setHP(v) {
+  player.hp = Math.max(0, Math.min(100, v));
+  hpEl.textContent = Math.round(player.hp);
+  hpEl.style.color = player.hp < 30 ? '#f33' : (player.hp < 60 ? '#fc3' : '#c33');
+}
+function setStamina(v) {
+  player.stamina = Math.max(0, Math.min(100, v));
+  stamEl.textContent = Math.round(player.stamina);
+}
+function setNoise(v) {
+  player.noise = Math.max(0, Math.min(100, v));
+  noiseEl.textContent = Math.round(player.noise);
+}
+
+function hint(text) {
+  hintEl.textContent = text;
+  hintEl.classList.add('show');
+}
+function clearHint() { hintEl.classList.remove('show'); }
+
+// ---------- Interact ----------
+function tryInteract() {
+  // Pick up items
+  for (const it of worldItems) {
+    if (it.picked) continue;
+    const d = Math.hypot(it.x - player.x, it.y - player.y);
+    if (d < TS) {
+      if (invAdd(it.id)) {
+        it.picked = true;
+        showMsg(`Aufgenommen: ${ITEM_DEFS[it.id].name}`, 1800);
+        blip(660, 0.1, 'square', 0.12);
+        addNoise(8);
+        return;
+      } else {
+        showMsg("Inventar voll!", 1500);
+        return;
+      }
+    }
+  }
+  // Open inner door (TILE_DOOR) when adjacent
+  const ptx = Math.floor(player.x/TS), pty = Math.floor(player.y/TS);
+  const adj = [[1,0],[-1,0],[0,1],[0,-1]];
+  for (const [dx,dy] of adj) {
+    const tx = ptx+dx, ty = pty+dy;
+    if (tileAt(tx,ty) === TILE_DOOR) {
+      setTile(tx, ty, TILE_FLOOR);
+      showMsg("Tür geöffnet (KNARZ!)", 1500);
+      blip(180, 0.25, 'sawtooth', 0.16);
+      addNoise(35);
+      return;
+    }
+    if (tileAt(tx,ty) === TILE_EXIT) {
+      // Need all 4 parts
+      const need = ['key_main','cog','fuse','code'];
+      const missing = need.filter(n => !invHas(n));
+      if (missing.length === 0) {
+        // Win!
+        win();
+      } else {
+        showMsg(`Fehlt: ${missing.map(n=>ITEM_DEFS[n].name).join(', ')}`, 2500);
+        blip(140, 0.2, 'sawtooth', 0.12);
+      }
+      return;
+    }
+  }
+}
+
+function tryHide() {
+  if (player.hidden) {
+    player.hidden = false;
+    player.hideTile = null;
+    showMsg("Versteck verlassen", 1200);
+    return;
+  }
+  const ptx = Math.floor(player.x/TS), pty = Math.floor(player.y/TS);
+  const adj = [[0,0],[1,0],[-1,0],[0,1],[0,-1]];
+  for (const [dx,dy] of adj) {
+    const tx = ptx+dx, ty = pty+dy;
+    const t = tileAt(tx, ty);
+    if (isHideable(t)) {
+      player.hidden = true;
+      player.hideTile = {x:tx, y:ty};
+      player.x = tx*TS + TS/2;
+      player.y = ty*TS + TS/2;
+      showMsg("Versteckt", 1200);
+      return;
+    }
+  }
+  showMsg("Hier kann man sich nicht verstecken", 1200);
+}
+
+function useSelectedItem() {
+  const id = inventory[invSelected];
+  if (!id) return;
+  if (id === 'painkill') {
+    setHP(player.hp + 35);
+    invRemove(id);
+    showMsg("Schmerzmittel verwendet (+35 HP)", 1800);
+    blip(880, 0.15, 'sine', 0.14);
+  } else if (id === 'taser') {
+    // Stun granny if in range
+    const d = Math.hypot(granny.x - player.x, granny.y - player.y);
+    if (d < 1.5*TS) {
+      granny.state = 'stunned';
+      granny.stunTimer = 6;
+      invRemove(id);
+      showMsg("Granny getasert! (6s betäubt)", 2000);
+      blip(1200, 0.2, 'square', 0.2);
+      noiseBurst(0.3, 0.2);
+    } else {
+      showMsg("Granny ist nicht in Reichweite", 1500);
+    }
+  } else if (id === 'hammer') {
+    // Break adjacent door
+    const ptx = Math.floor(player.x/TS), pty = Math.floor(player.y/TS);
+    const adj = [[1,0],[-1,0],[0,1],[0,-1]];
+    for (const [dx,dy] of adj) {
+      const tx = ptx+dx, ty = pty+dy;
+      if (tileAt(tx,ty) === TILE_DOOR) {
+        setTile(tx,ty,TILE_FLOOR);
+        showMsg("Tür eingeschlagen (LAUT!)", 1500);
+        blip(120, 0.3, 'sawtooth', 0.25);
+        noiseBurst(0.4, 0.25);
+        addNoise(70);
+        return;
+      }
+    }
+    showMsg("Hier gibt's nichts zum Zerschlagen", 1200);
+  } else {
+    showMsg(`${ITEM_DEFS[id].name} (kein direkter Effekt)`, 1500);
+  }
+}
+
+// ---------- Noise ----------
+function addNoise(amount) {
+  setNoise(player.noise + amount);
+  // Alert granny if noise high
+  if (player.noise > 35) {
+    granny.target = {x: Math.floor(player.x/TS), y: Math.floor(player.y/TS)};
+    if (granny.state !== 'chase' && granny.state !== 'stunned') {
+      granny.state = 'investigate';
+      granny.path = [];
+    }
+  }
+}
+
+// ---------- Granny update ----------
+function updateGranny(dt) {
+  if (granny.state === 'stunned') {
+    granny.stunTimer -= dt;
+    if (granny.stunTimer <= 0) granny.state = 'patrol';
+    return;
+  }
+  granny.attackCooldown = Math.max(0, granny.attackCooldown - dt);
+
+  // sight detection (line-of-sight unblocked & player not hidden)
+  const dx = player.x - granny.x, dy = player.y - granny.y;
+  const dist = Math.hypot(dx, dy);
+  if (!player.hidden && dist < granny.sightRange && lineOfSight(granny.x, granny.y, player.x, player.y)) {
+    granny.state = 'chase';
+    granny.target = {x: Math.floor(player.x/TS), y: Math.floor(player.y/TS)};
+  }
+  // hearing detection
+  if (!player.hidden && dist < granny.hearRange && player.noise > 25) {
+    granny.state = granny.state === 'chase' ? 'chase' : 'investigate';
+    granny.target = {x: Math.floor(player.x/TS), y: Math.floor(player.y/TS)};
+  }
+
+  // movement
+  granny.pathTimer -= dt;
+  let goalTile = null;
+  if (granny.state === 'chase' && granny.target) {
+    goalTile = granny.target;
+    if (granny.pathTimer <= 0) {
+      granny.path = aStar(Math.floor(granny.x/TS), Math.floor(granny.y/TS), goalTile.x, goalTile.y);
+      granny.pathTimer = 0.4;
+    }
+  } else if (granny.state === 'investigate' && granny.target) {
+    goalTile = granny.target;
+    if (granny.pathTimer <= 0) {
+      granny.path = aStar(Math.floor(granny.x/TS), Math.floor(granny.y/TS), goalTile.x, goalTile.y);
+      granny.pathTimer = 0.6;
+    }
+    // arrived?
+    if (Math.abs(granny.x - (goalTile.x*TS+TS/2)) < 6 && Math.abs(granny.y - (goalTile.y*TS+TS/2)) < 6) {
+      granny.state = 'patrol';
+      granny.path = [];
+    }
+  } else {
+    // patrol
+    const pt = granny.patrolPoints[granny.patrolIdx];
+    goalTile = pt;
+    if (granny.pathTimer <= 0) {
+      granny.path = aStar(Math.floor(granny.x/TS), Math.floor(granny.y/TS), pt.x, pt.y);
+      granny.pathTimer = 1.0;
+    }
+    if (Math.abs(granny.x - (pt.x*TS+TS/2)) < 8 && Math.abs(granny.y - (pt.y*TS+TS/2)) < 8) {
+      granny.patrolIdx = (granny.patrolIdx + 1) % granny.patrolPoints.length;
+      granny.path = [];
+    }
+  }
+
+  // walk along path
+  let speed = granny.speed;
+  if (granny.state === 'chase') speed = 110;
+  if (granny.path && granny.path.length > 0) {
+    const next = granny.path[0];
+    const tx = next.x*TS + TS/2, ty = next.y*TS + TS/2;
+    const ddx = tx - granny.x, ddy = ty - granny.y;
+    const dd = Math.hypot(ddx, ddy);
+    if (dd < 4) {
+      granny.path.shift();
+    } else {
+      const vx = (ddx/dd) * speed * dt;
+      const vy = (ddy/dd) * speed * dt;
+      moveEntity(granny, vx, vy);
+      // Granny can open doors by walking through
+      const ntx = Math.floor(granny.x/TS), nty = Math.floor(granny.y/TS);
+      if (tileAt(ntx, nty) === TILE_DOOR) setTile(ntx, nty, TILE_FLOOR);
+    }
+  }
+
+  // attack
+  if (!player.hidden && dist < TS && granny.attackCooldown <= 0) {
+    playerHit();
+    granny.attackCooldown = 1.2;
+  }
+}
+
+function lineOfSight(x1, y1, x2, y2) {
+  const steps = Math.ceil(Math.hypot(x2-x1, y2-y1) / (TS/2));
+  for (let i = 1; i <= steps; i++) {
+    const t = i/steps;
+    const xx = x1 + (x2-x1)*t;
+    const yy = y1 + (y2-y1)*t;
+    const tt = tileAt(Math.floor(xx/TS), Math.floor(yy/TS));
+    if (tt === TILE_WALL || tt === TILE_TABLE || tt === TILE_WARDROBE) return false;
+  }
+  return true;
+}
+
+// ---------- Damage / death / endings ----------
+function playerHit() {
+  setHP(player.hp - 25);
+  bloodflash.classList.add('hit');
+  setTimeout(()=>bloodflash.classList.remove('hit'), 200);
+  blip(90, 0.25, 'sawtooth', 0.25);
+  noiseBurst(0.2, 0.2);
+  if (player.hp <= 0) {
+    // KO: lose 1 day
+    knockedOut();
+  }
+}
+
+function knockedOut() {
+  day++;
+  if (day > 5) { lose(); return; }
+  showMsg(`KO! Du wachst am Tag ${day} auf...`, 3500);
+  setHP(100);
+  setStamina(100);
+  setNoise(0);
+  spawnPlayer();
+  // Reset granny to far point
+  granny.x = 16*TS; granny.y = 3*TS;
+  granny.state = 'patrol'; granny.path = [];
+  dayEl.textContent = day;
+  timeOfDay = 0;
+}
+
+function lose() {
+  running = false;
+  overlay.classList.remove('hidden');
+  overlay.querySelector('h1').textContent = "TOT";
+  overlay.querySelector('h1').style.color = "#600";
+  overlay.querySelector('h2').textContent = "DIE TAGE SIND VORBEI";
+  overlay.querySelectorAll('p').forEach(p=>p.remove());
+  const p = document.createElement('p');
+  p.innerHTML = "Granny hat dich für immer. Drücke <span class='key'>START</span> für einen neuen Versuch.";
+  overlay.insertBefore(p, overlay.querySelector('.controls'));
+  startBtn.textContent = "NEU STARTEN";
+}
+
+function win() {
+  running = false;
+  overlay.classList.remove('hidden');
+  overlay.querySelector('h1').textContent = "GEFLOHEN";
+  overlay.querySelector('h1').style.color = "#3a3";
+  overlay.querySelector('h2').textContent = "DU HAST ÜBERLEBT";
+  overlay.querySelectorAll('p').forEach(p=>p.remove());
+  const p = document.createElement('p');
+  p.innerHTML = `Du bist nach <span class='key'>${day} Tag(en)</span> entkommen.`;
+  overlay.insertBefore(p, overlay.querySelector('.controls'));
+  startBtn.textContent = "NOCHMAL SPIELEN";
+}
+
+// ---------- Main loop ----------
 function update(dt) {
-  if (state !== "play") return;
+  if (!running) return;
 
-  // Player movement
-  let mx = 0, my = 0;
-  if (keys["w"] || keys["arrowup"]) my -= 1;
-  if (keys["s"] || keys["arrowdown"]) my += 1;
-  if (keys["a"] || keys["arrowleft"]) mx -= 1;
-  if (keys["d"] || keys["arrowright"]) mx += 1;
-  const len = Math.hypot(mx, my);
-  if (len > 0) { mx /= len; my /= len; }
-
-  let speed = player.speed;
-  if (keys["shift"] && player.sprintLeft > 0 && len > 0) {
-    speed *= 1.7;
-    player.sprintLeft -= dt;
-    if (player.sprintLeft < 0) player.sprintLeft = 0;
-  } else {
-    player.sprintLeft = Math.min(player.sprintMax, player.sprintLeft + dt * player.sprintRegen);
+  // Time of day
+  timeOfDay += dt / DAY_DURATION;
+  if (timeOfDay >= 1) {
+    day++;
+    timeOfDay = 0;
+    if (day > 5) { lose(); return; }
+    showMsg(`Tag ${day} bricht an...`, 2500);
+    dayEl.textContent = day;
   }
+  const hour = Math.floor(6 + timeOfDay*18); // 6h - 24h
+  timeEl.textContent = `${String(hour).padStart(2,'0')}:00`;
 
-  moveCircle(player, mx * speed * dt, my * speed * dt);
+  // Player input
+  let ix = 0, iy = 0;
+  if (keys['KeyW'] || keys['ArrowUp'])    iy -= 1;
+  if (keys['KeyS'] || keys['ArrowDown'])  iy += 1;
+  if (keys['KeyA'] || keys['ArrowLeft'])  ix -= 1;
+  if (keys['KeyD'] || keys['ArrowRight']) ix += 1;
+  const running_ = (keys['ShiftLeft'] || keys['ShiftRight']) && player.stamina > 0;
+  const sneaking = keys['ControlLeft'] || keys['ControlRight'];
 
-  // Aim
-  const worldMouseX = mouse.x + cam.x;
-  const worldMouseY = mouse.y + cam.y;
-  player.angle = Math.atan2(worldMouseY - player.y, worldMouseX - player.x);
+  let spd = player.speed;
+  let noiseAdd = 0;
+  if (running_) { spd = 160; noiseAdd = 25 * dt; }
+  else if (sneaking) { spd = 50; noiseAdd = 0; }
+  else { noiseAdd = 5 * dt; }
 
-  // Fire
-  player.fireCD = Math.max(0, (player.fireCD || 0) - dt);
-  if (mouse.down) fireBullet();
-
-  // Weapon pickup
-  if (!weaponPickup.picked) {
-    const dx = player.x - weaponPickup.x, dy = player.y - weaponPickup.y;
-    if (dx * dx + dy * dy < 30 * 30) {
-      weaponPickup.picked = true;
-      player.hasWeapon = true;
-      player.ammo = 6;
-      say("Eine Pistole. Wem auch immer die gehört hat, danke. Sechs Schuss.", 4000);
-      beep(440, 0.1, "triangle", 0.2);
-    }
-  }
-
-  // Phone booth interact
-  const pbCenter = { x: phoneBooth.x + phoneBooth.w / 2, y: phoneBooth.y + phoneBooth.h / 2 };
-  const pbDx = player.x - pbCenter.x, pbDy = player.y - pbCenter.y;
-  const nearPhone = pbDx * pbDx + pbDy * pbDy < 60 * 60;
-  if (nearPhone && !calledPolice) {
-    if (keys["e"]) {
-      phoneBooth.charging += dt;
-      if (phoneBooth.charging === 0) say("Halte E gedrückt...", 1500);
-      if (phoneBooth.charging > 2.5) {
-        calledPolice = true;
-        say("Hallo? Polizei? Bitte... bitte schnell! Hauptstraße 616!", 4500);
-        policeSiren(4);
+  if (!player.hidden) {
+    if (ix !== 0 || iy !== 0) {
+      const len = Math.hypot(ix, iy);
+      ix /= len; iy /= len;
+      moveEntity(player, ix * spd * dt, iy * spd * dt);
+      addNoise(noiseAdd);
+      if (running_) {
+        player.stamina = Math.max(0, player.stamina - 18*dt);
       }
     } else {
-      if (phoneBooth.charging > 0 && phoneBooth.charging < 2.5) {
-        say("Halte [E] zum Wählen. Polizei rufen.", 2000);
-      }
-      phoneBooth.charging = Math.max(0, phoneBooth.charging - dt);
+      // recover
+      if (!running_) player.stamina = Math.min(100, player.stamina + 12*dt);
+      // noise decays
+      setNoise(player.noise - 10*dt);
     }
-  }
-
-  // After call, police take time to arrive
-  if (calledPolice) {
-    policeTimer += dt;
-    if (policeTimer > 12) {
-      state = "win";
-      showWin();
-    }
-  }
-
-  // Bullets update
-  for (const b of bullets) {
-    b.x += b.vx * dt;
-    b.y += b.vy * dt;
-    b.life -= dt;
-    for (const w of walls) {
-      if (pointInRect(b.x, b.y, w)) { b.life = 0; break; }
-    }
-    // hit demon?
-    const ddx = b.x - demon.x, ddy = b.y - demon.y;
-    if (ddx * ddx + ddy * ddy < demon.r * demon.r && demon.stun <= 0) {
-      b.life = 0;
-      demon.stun = 4.0; // big push-back
-      demonHits++;
-      // teleport demon further away to simulate retreat / vorsprung
-      const ang = Math.atan2(demon.y - player.y, demon.x - player.x);
-      demon.x += Math.cos(ang) * 300;
-      demon.y += Math.sin(ang) * 300;
-      // keep inside world
-      demon.x = Math.max(40, Math.min(WORLD_W - 40, demon.x));
-      demon.y = Math.max(40, Math.min(WORLD_H - 40, demon.y));
-      screenShake = 0.4;
-      demonGrowl();
-      say("Er weicht zurück! Lauf!", 2200);
-    }
-  }
-  bullets = bullets.filter(b => b.life > 0);
-
-  // Demon AI
-  if (demon.stun > 0) {
-    demon.stun -= dt;
   } else {
-    // chase player; speeds up after police are called (final push)
-    let dspeed = demon.speed;
-    if (calledPolice) dspeed *= 1.35;
-    const dx = player.x - demon.x, dy = player.y - demon.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist > 1) {
-      // Crude pathing: try direct; if blocked, jitter angle slightly
-      let ang = Math.atan2(dy, dx);
-      let testX = demon.x + Math.cos(ang) * dspeed * dt;
-      let testY = demon.y + Math.sin(ang) * dspeed * dt;
-      let blocked = false;
-      for (const w of walls) {
-        if (circleRectOverlap(testX, testY, demon.r, w)) { blocked = true; break; }
-      }
-      if (blocked) {
-        const tryAngles = [ang + 0.6, ang - 0.6, ang + 1.2, ang - 1.2, ang + Math.PI / 2, ang - Math.PI / 2];
-        for (const a of tryAngles) {
-          const tx = demon.x + Math.cos(a) * dspeed * dt;
-          const ty = demon.y + Math.sin(a) * dspeed * dt;
-          let ok = true;
-          for (const w of walls) {
-            if (circleRectOverlap(tx, ty, demon.r, w)) { ok = false; break; }
-          }
-          if (ok) { ang = a; break; }
-        }
-      }
-      moveCircle(demon, Math.cos(ang) * dspeed * dt, Math.sin(ang) * dspeed * dt);
-      demon.angle = ang;
+    // hidden: silence
+    setNoise(player.noise - 20*dt);
+    player.stamina = Math.min(100, player.stamina + 14*dt);
+  }
+  // Always decay noise a bit
+  if (!running_ && (ix === 0 && iy === 0)) setNoise(player.noise - 8*dt);
+
+  setStamina(player.stamina);
+
+  // Hint near interactable
+  let nearItem = null;
+  for (const it of worldItems) {
+    if (it.picked) continue;
+    if (Math.hypot(it.x-player.x, it.y-player.y) < TS) { nearItem = it; break; }
+  }
+  if (nearItem) hint(`[E] ${ITEM_DEFS[nearItem.id].name} aufheben`);
+  else {
+    // door/exit
+    const ptx = Math.floor(player.x/TS), pty = Math.floor(player.y/TS);
+    let near = null;
+    for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+      const t = tileAt(ptx+dx, pty+dy);
+      if (t === TILE_DOOR) near = 'door';
+      else if (t === TILE_EXIT) near = 'exit';
+      else if (isHideable(t)) near = 'hide';
     }
-    demon.growlTimer -= dt;
-    if (demon.growlTimer <= 0) {
-      demonGrowl();
-      demon.growlTimer = 4 + Math.random() * 5;
-    }
+    if (near === 'door') hint("[E] Tür öffnen (knarzt)");
+    else if (near === 'exit') hint("[E] Haupttür benutzen");
+    else if (near === 'hide') hint("[F] Verstecken");
+    else clearHint();
   }
 
-  // Demon hits player
-  if (player.invuln > 0) player.invuln -= dt;
-  const pdx = player.x - demon.x, pdy = player.y - demon.y;
-  if (pdx * pdx + pdy * pdy < (player.r + demon.r) * (player.r + demon.r) && player.invuln <= 0 && demon.stun <= 0) {
-    player.hp--;
-    player.invuln = 1.2;
-    screenShake = 0.5;
-    demonGrowl();
-    if (player.hp <= 0) {
-      state = "dead";
-      showDead();
-    } else {
-      say("Er hat mich erwischt! Ich blute!", 2500);
-    }
-  }
+  // Granny
+  updateGranny(dt);
 
-  // Camera follow with shake
-  const targetCamX = player.x - W / 2;
-  const targetCamY = player.y - H / 2;
-  cam.x += (targetCamX - cam.x) * Math.min(1, dt * 8);
-  cam.y += (targetCamY - cam.y) * Math.min(1, dt * 8);
-  cam.x = Math.max(0, Math.min(WORLD_W - W, cam.x));
-  cam.y = Math.max(0, Math.min(WORLD_H - H, cam.y));
-  if (screenShake > 0) {
-    screenShake -= dt;
-    cam.x += (Math.random() - 0.5) * screenShake * 20;
-    cam.y += (Math.random() - 0.5) * screenShake * 20;
-  }
+  // Heartbeat sfx
+  hbTimer -= dt;
+  if (hbTimer <= 0) { heartbeat(); hbTimer = 0.9; }
 
-  // Subtitle timer
-  if (subtitleTimer > 0) {
-    subtitleTimer -= dt;
-    if (subtitleTimer <= 0) subtitleEl.classList.remove("show");
+  // HUD
+  hpEl.textContent = Math.round(player.hp);
+  noiseEl.textContent = Math.round(player.noise);
+  stamEl.textContent = Math.round(player.stamina);
+
+  // Message timer
+  if (msgTimer > 0) {
+    msgTimer -= dt*1000;
+    if (msgTimer <= 0) hideMsg();
   }
 }
 
-// --- Render ---
-function render() {
-  ctx.clearRect(0, 0, W, H);
+let hbTimer = 0;
 
-  // Ground (parking lot tiles) — drawn in world space relative to camera
-  ctx.fillStyle = "#1a1a1a";
+// ---------- Render ----------
+function drawTile(t, x, y, daylight) {
+  switch (t) {
+    case TILE_WALL: {
+      ctx.fillStyle = '#2a2018';
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = '#3a2e22';
+      ctx.fillRect(x+2, y+2, TS-4, TS-4);
+      ctx.fillStyle = '#1a130c';
+      ctx.fillRect(x, y+TS-3, TS, 3);
+      break;
+    }
+    case TILE_FLOOR: {
+      ctx.fillStyle = '#3a2a1d';
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = '#2e2116';
+      ctx.fillRect(x, y+TS-2, TS, 2);
+      ctx.fillRect(x+TS-2, y, 2, TS);
+      break;
+    }
+    case TILE_DOOR: {
+      ctx.fillStyle = '#5a3a20';
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = '#3a2410';
+      ctx.fillRect(x+4, y+4, TS-8, TS-8);
+      ctx.fillStyle = '#d4af37';
+      ctx.fillRect(x+TS-8, y+TS/2-1, 4, 3);
+      break;
+    }
+    case TILE_EXIT: {
+      ctx.fillStyle = '#222';
+      ctx.fillRect(x, y, TS, TS);
+      ctx.strokeStyle = '#b00';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x+3, y+3, TS-6, TS-6);
+      ctx.fillStyle = '#b00';
+      ctx.font = 'bold 14px monospace';
+      ctx.fillText("EXIT", x+3, y+TS/2+4);
+      break;
+    }
+    case TILE_GRASS: {
+      ctx.fillStyle = '#1a2a14';
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = '#243a1c';
+      for (let i = 0; i < 3; i++) {
+        ctx.fillRect(x + (i*9+5)%TS, y + (i*7+3)%TS, 2, 4);
+      }
+      break;
+    }
+    case TILE_KITCHEN: {
+      ctx.fillStyle = '#3a3a40';
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = '#2a2a30';
+      ctx.fillRect(x, y, TS, 1);
+      ctx.fillRect(x, y, 1, TS);
+      break;
+    }
+    case TILE_BED: {
+      ctx.fillStyle = '#3a2a1d';
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = '#5a2828';
+      ctx.fillRect(x+3, y+3, TS-6, TS-6);
+      ctx.fillStyle = '#eee';
+      ctx.fillRect(x+5, y+5, TS-10, 6);
+      break;
+    }
+    case TILE_WARDROBE: {
+      ctx.fillStyle = '#3a2a1d';
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = '#4a2a14';
+      ctx.fillRect(x+2, y+2, TS-4, TS-4);
+      ctx.fillStyle = '#222';
+      ctx.fillRect(x+TS/2-1, y+4, 2, TS-8);
+      ctx.fillStyle = '#d4af37';
+      ctx.fillRect(x+TS/2-4, y+TS/2-1, 2, 2);
+      ctx.fillRect(x+TS/2+2, y+TS/2-1, 2, 2);
+      break;
+    }
+    case TILE_TABLE: {
+      ctx.fillStyle = '#3a2a1d';
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = '#6a4a2a';
+      ctx.fillRect(x+3, y+3, TS-6, TS-6);
+      ctx.fillStyle = '#3a2a1a';
+      ctx.fillRect(x+6, y+6, TS-12, TS-12);
+      break;
+    }
+    case TILE_TOILET: {
+      ctx.fillStyle = '#3a3a40';
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = '#ddd';
+      ctx.fillRect(x+6, y+6, TS-12, TS-12);
+      ctx.fillStyle = '#aaa';
+      ctx.fillRect(x+8, y+8, TS-16, TS-12);
+      break;
+    }
+    case TILE_SINK: {
+      ctx.fillStyle = '#3a3a40';
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = '#bbb';
+      ctx.fillRect(x+4, y+8, TS-8, TS-14);
+      ctx.fillStyle = '#5cf';
+      ctx.fillRect(x+TS/2-1, y+4, 2, 6);
+      break;
+    }
+  }
+}
+
+function render() {
+  // background
+  ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
 
+  // camera centers on player
+  const camX = Math.max(0, Math.min(player.x - W/2, MAP_W*TS - W));
+  const camY = Math.max(0, Math.min(player.y - H/2, MAP_H*TS - H));
+
   ctx.save();
-  ctx.translate(-cam.x, -cam.y);
+  ctx.translate(-camX, -camY);
 
-  // Floor pattern
-  const startX = Math.floor(cam.x / TILE) * TILE;
-  const startY = Math.floor(cam.y / TILE) * TILE;
-  ctx.strokeStyle = "#222";
-  ctx.lineWidth = 1;
-  for (let x = startX; x < cam.x + W + TILE; x += TILE) {
-    ctx.beginPath();
-    ctx.moveTo(x, cam.y);
-    ctx.lineTo(x, cam.y + H);
-    ctx.stroke();
-  }
-  for (let y = startY; y < cam.y + H + TILE; y += TILE) {
-    ctx.beginPath();
-    ctx.moveTo(cam.x, y);
-    ctx.lineTo(cam.x + W, y);
-    ctx.stroke();
+  // tiles
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      drawTile(grid[y][x], x*TS, y*TS);
+    }
   }
 
-  // Walls
-  for (const w of walls) {
-    ctx.fillStyle = "#3a3a3a";
-    ctx.fillRect(w.x, w.y, w.w, w.h);
-    ctx.strokeStyle = "#555";
-    ctx.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1);
-  }
-
-  // Weapon pickup
-  if (!weaponPickup.picked) {
-    ctx.save();
-    ctx.translate(weaponPickup.x, weaponPickup.y);
-    const pulse = 0.6 + 0.4 * Math.sin(performance.now() / 200);
-    ctx.fillStyle = `rgba(220,220,160,${pulse})`;
+  // items
+  for (const it of worldItems) {
+    if (it.picked) continue;
+    const d = ITEM_DEFS[it.id];
+    // pulse
+    const pulse = 0.4 + 0.3*Math.sin(performance.now()/300);
+    ctx.fillStyle = `rgba(0,0,0,${pulse})`;
     ctx.beginPath();
-    ctx.arc(0, 0, 14, 0, Math.PI * 2);
+    ctx.arc(it.x, it.y, 12, 0, Math.PI*2);
     ctx.fill();
-    ctx.fillStyle = "#222";
-    ctx.fillRect(-7, -2, 14, 5);
-    ctx.fillRect(-3, 2, 4, 6);
-    ctx.restore();
-  }
-
-  // Phone booth
-  ctx.fillStyle = calledPolice ? "#225522" : "#2a3a55";
-  ctx.fillRect(phoneBooth.x, phoneBooth.y, phoneBooth.w, phoneBooth.h);
-  ctx.strokeStyle = "#88aaff";
-  ctx.strokeRect(phoneBooth.x + 0.5, phoneBooth.y + 0.5, phoneBooth.w - 1, phoneBooth.h - 1);
-  ctx.fillStyle = "#88aaff";
-  ctx.fillRect(phoneBooth.x + 8, phoneBooth.y + 10, phoneBooth.w - 16, 20);
-  // Glow
-  if (!calledPolice) {
-    ctx.fillStyle = "rgba(120,160,255,0.15)";
+    ctx.fillStyle = d.color;
     ctx.beginPath();
-    ctx.arc(phoneBooth.x + phoneBooth.w / 2, phoneBooth.y + phoneBooth.h / 2, 70, 0, Math.PI * 2);
+    ctx.arc(it.x, it.y, 6, 0, Math.PI*2);
     ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(d.glyph, it.x, it.y+3);
+    ctx.textAlign = 'left';
   }
 
-  // Bullets
-  for (const b of bullets) {
-    ctx.fillStyle = "#ffcc66";
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  // granny
+  drawGranny();
 
-  // Demon (draw before darkness mask so flashlight reveals)
-  drawDemon();
-
-  // Player
+  // player
   drawPlayer();
 
-  // Police cars approaching after call
-  if (calledPolice) {
-    const t = Math.min(1, policeTimer / 12);
-    const carX = phoneBooth.x - 200 + t * 180;
-    const carY = phoneBooth.y - 60;
-    drawPoliceCar(carX, carY, t);
-    drawPoliceCar(carX - 100, carY + 40, t);
-  }
-
+  // Darkness/flashlight overlay (player has limited vision at night)
   ctx.restore();
-
-  // Darkness overlay using "destination-out" trick: draw black, then cut out flashlight cone
-  drawDarkness();
-
-  // Hit flash
-  if (player.invuln > 0 && state === "play") {
-    ctx.fillStyle = `rgba(180,0,0,${player.invuln * 0.4})`;
-    ctx.fillRect(0, 0, W, H);
-  }
-
-  updateHud();
+  drawDarkness(camX, camY);
 }
 
 function drawPlayer() {
-  ctx.save();
-  ctx.translate(player.x, player.y);
-  // Pizza box behind back when no weapon
-  if (!player.hasWeapon) {
-    ctx.save();
-    ctx.rotate(player.angle + Math.PI);
-    ctx.fillStyle = "#cc8844";
-    ctx.fillRect(-10, -10, 20, 20);
-    ctx.strokeStyle = "#553311";
-    ctx.strokeRect(-10, -10, 20, 20);
-    ctx.fillStyle = "#553311";
-    ctx.fillRect(-8, -1, 16, 2);
-    ctx.restore();
+  if (player.hidden) {
+    // small indicator dot
+    ctx.fillStyle = 'rgba(80,80,80,0.6)';
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, 5, 0, Math.PI*2);
+    ctx.fill();
+    return;
   }
-  ctx.rotate(player.angle);
-  // body
-  ctx.fillStyle = player.invuln > 0 && Math.floor(player.invuln * 10) % 2 ? "#990000" : "#cc2222";
+  // shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.beginPath();
-  ctx.arc(0, 0, player.r, 0, Math.PI * 2);
+  ctx.ellipse(player.x, player.y+8, 10, 4, 0, 0, Math.PI*2);
   ctx.fill();
-  // cap
-  ctx.fillStyle = "#222";
-  ctx.fillRect(-6, -player.r - 2, 12, 4);
-  // arms / weapon
-  if (player.hasWeapon) {
-    ctx.fillStyle = "#222";
-    ctx.fillRect(8, -2, 12, 4);
-  } else {
-    ctx.fillStyle = "#cc2222";
-    ctx.fillRect(6, -3, 8, 6);
-  }
-  ctx.restore();
+  // body
+  ctx.fillStyle = '#3060a0';
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
+  ctx.fill();
+  // head
+  ctx.fillStyle = '#e0b090';
+  ctx.beginPath();
+  ctx.arc(player.x, player.y-3, 5, 0, Math.PI*2);
+  ctx.fill();
 }
 
-function drawDemon() {
-  ctx.save();
-  ctx.translate(demon.x, demon.y);
-  // shadow aura
-  const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 40);
-  grad.addColorStop(0, "rgba(120,0,0,0.5)");
-  grad.addColorStop(1, "rgba(0,0,0,0)");
+function drawGranny() {
+  // shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.beginPath();
+  ctx.ellipse(granny.x, granny.y+9, 12, 4, 0, 0, Math.PI*2);
+  ctx.fill();
+  // dress
+  ctx.fillStyle = granny.state === 'chase' ? '#6a0e0e' : '#403040';
+  ctx.beginPath();
+  ctx.arc(granny.x, granny.y, granny.r, 0, Math.PI*2);
+  ctx.fill();
+  // head
+  ctx.fillStyle = '#d0b090';
+  ctx.beginPath();
+  ctx.arc(granny.x, granny.y-4, 6, 0, Math.PI*2);
+  ctx.fill();
+  // hair (gray bun)
+  ctx.fillStyle = '#ccc';
+  ctx.beginPath();
+  ctx.arc(granny.x, granny.y-9, 4, 0, Math.PI*2);
+  ctx.fill();
+  // eyes red when chasing
+  if (granny.state === 'chase') {
+    ctx.fillStyle = '#f00';
+    ctx.fillRect(granny.x-3, granny.y-5, 2, 2);
+    ctx.fillRect(granny.x+1, granny.y-5, 2, 2);
+  } else {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(granny.x-3, granny.y-5, 2, 1);
+    ctx.fillRect(granny.x+1, granny.y-5, 2, 1);
+  }
+  // stunned ZZ
+  if (granny.state === 'stunned') {
+    ctx.fillStyle = '#5cf';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText('Z', granny.x+8, granny.y-10);
+  }
+}
+
+function drawDarkness(camX, camY) {
+  // Night factor: 1 = full night, 0 = day
+  const night = Math.max(0, Math.min(1, Math.abs(timeOfDay - 0.5) * 2));
+  // We want darker as day goes on; granny is scariest at night
+  const dark = 0.25 + night * 0.55;
+  // Radial light around player
+  const px = player.x - camX, py = player.y - camY;
+  const r = player.hidden ? 40 : 200;
+  const grad = ctx.createRadialGradient(px, py, 20, px, py, r);
+  grad.addColorStop(0, `rgba(0,0,0,0)`);
+  grad.addColorStop(0.7, `rgba(0,0,0,${dark*0.6})`);
+  grad.addColorStop(1, `rgba(0,0,0,${dark})`);
   ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(0, 0, 40, 0, Math.PI * 2);
-  ctx.fill();
-  // body
-  ctx.fillStyle = demon.stun > 0 ? "#552222" : "#220000";
-  ctx.beginPath();
-  ctx.arc(0, 0, demon.r, 0, Math.PI * 2);
-  ctx.fill();
-  // horns
-  ctx.fillStyle = "#111";
-  ctx.beginPath();
-  ctx.moveTo(-8, -demon.r);
-  ctx.lineTo(-12, -demon.r - 10);
-  ctx.lineTo(-4, -demon.r - 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(8, -demon.r);
-  ctx.lineTo(12, -demon.r - 10);
-  ctx.lineTo(4, -demon.r - 2);
-  ctx.fill();
-  // eyes
-  const eyePulse = 0.7 + 0.3 * Math.sin(performance.now() / 120);
-  ctx.fillStyle = `rgba(255,${demon.stun > 0 ? 100 : 30},0,${eyePulse})`;
-  ctx.beginPath();
-  ctx.arc(-5, -2, 3, 0, Math.PI * 2);
-  ctx.arc(5, -2, 3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  ctx.fillRect(0, 0, W, H);
 }
 
-function drawPoliceCar(x, y, t) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.fillStyle = "#1a1a55";
-  ctx.fillRect(-25, -12, 50, 24);
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(-25, -2, 50, 4);
-  // flashing lights
-  const phase = Math.floor(performance.now() / 200) % 2;
-  ctx.fillStyle = phase ? "#ff3030" : "#3030ff";
-  ctx.fillRect(-8, -14, 16, 4);
-  // headlight cone
-  ctx.fillStyle = "rgba(255,255,200,0.15)";
-  ctx.beginPath();
-  ctx.moveTo(25, 0);
-  ctx.lineTo(150, -40);
-  ctx.lineTo(150, 40);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawDarkness() {
-  // Build the dark layer with the flashlight cone cut out.
-  const dctx = ctx;
-  // Off-screen composite onto a separate canvas? Simpler: draw black, then use destination-out with the cone.
-  dctx.save();
-  dctx.fillStyle = "rgba(0,0,0,0.92)";
-  dctx.fillRect(0, 0, W, H);
-  // Cut out flashlight cone using destination-out
-  dctx.globalCompositeOperation = "destination-out";
-  const sx = player.x - cam.x;
-  const sy = player.y - cam.y;
-  const range = player.flashlight.range;
-  const cone = player.flashlight.cone;
-  // Use a radial gradient for soft falloff
-  const fg = dctx.createRadialGradient(sx, sy, 10, sx, sy, range);
-  fg.addColorStop(0, "rgba(0,0,0,1)");
-  fg.addColorStop(0.5, "rgba(0,0,0,0.85)");
-  fg.addColorStop(1, "rgba(0,0,0,0)");
-  dctx.fillStyle = fg;
-  dctx.beginPath();
-  dctx.moveTo(sx, sy);
-  dctx.arc(sx, sy, range, player.angle - cone, player.angle + cone);
-  dctx.closePath();
-  dctx.fill();
-
-  // small ambient circle around player
-  const ag = dctx.createRadialGradient(sx, sy, 0, sx, sy, 60);
-  ag.addColorStop(0, "rgba(0,0,0,0.9)");
-  ag.addColorStop(1, "rgba(0,0,0,0)");
-  dctx.fillStyle = ag;
-  dctx.beginPath();
-  dctx.arc(sx, sy, 60, 0, Math.PI * 2);
-  dctx.fill();
-
-  dctx.globalCompositeOperation = "source-over";
-
-  // Faint flashlight beam tint
-  dctx.save();
-  dctx.globalCompositeOperation = "lighter";
-  const beam = dctx.createRadialGradient(sx, sy, 10, sx, sy, range);
-  beam.addColorStop(0, "rgba(255,240,180,0.18)");
-  beam.addColorStop(1, "rgba(255,240,180,0)");
-  dctx.fillStyle = beam;
-  dctx.beginPath();
-  dctx.moveTo(sx, sy);
-  dctx.arc(sx, sy, range, player.angle - cone, player.angle + cone);
-  dctx.closePath();
-  dctx.fill();
-  dctx.restore();
-
-  dctx.restore();
-}
-
-function updateHud() {
-  const ammoText = player.hasWeapon ? `Munition: ${player.ammo}/6` : "Keine Waffe";
-  const hpDots = "♥".repeat(player.hp) + "·".repeat(Math.max(0, 3 - player.hp));
-  let phoneLine = "";
-  if (calledPolice) {
-    const eta = Math.max(0, 12 - policeTimer).toFixed(1);
-    phoneLine = `<span style="color:#88aaff">Polizei unterwegs — ETA ${eta}s</span>`;
-  } else {
-    const distToPhone = Math.hypot(player.x - (phoneBooth.x + 25), player.y - (phoneBooth.y + 40));
-    phoneLine = `Telefonzelle: ${Math.round(distToPhone)}m`;
-  }
-  const sprint = Math.round((player.sprintLeft / player.sprintMax) * 100);
-  hud.innerHTML = `
-    <div style="color:#cc2222">${hpDots}</div>
-    <div>${ammoText}</div>
-    <div>Sprint: ${sprint}%</div>
-    <div>${phoneLine}</div>
-  `;
-}
-
-// --- End screens ---
-function showDead() {
-  overlay.innerHTML = `
-    <h1 style="color:#660000">TOT</h1>
-    <h2>Bestellung wurde abgeschlossen.</h2>
-    <p>Der Dämon hat seine Lieferung erhalten.<br>Du.</p>
-    <button id="restartBtn">NOCH EINMAL</button>
-  `;
-  overlay.classList.remove("hidden");
-  document.getElementById("restartBtn").addEventListener("click", () => {
-    overlay.classList.add("hidden");
-    resetGame();
-  });
-}
-function showWin() {
-  overlay.innerHTML = `
-    <h1 style="color:#88aaff">GERETTET</h1>
-    <h2>Die Polizei ist da.</h2>
-    <p>Die Sirenen schneiden durch die Nacht.<br>
-    Du wirfst einen letzten Blick zurück — die Tür steht offen,<br>
-    die Pizza liegt unangetastet auf der Schwelle.<br>
-    Niemand bestellt um drei Uhr morgens, ohne einen Grund.</p>
-    <button id="restartBtn">NEUE SCHICHT</button>
-  `;
-  overlay.classList.remove("hidden");
-  document.getElementById("restartBtn").addEventListener("click", () => {
-    overlay.classList.add("hidden");
-    resetGame();
-  });
-}
-
-// --- Loop ---
-function loop(ts) {
-  const dt = Math.min(0.05, (ts - lastTime) / 1000 || 0);
-  lastTime = ts;
-  if (state === "play") update(dt);
+// ---------- Main loop ----------
+function loop(now) {
+  const t = now / 1000;
+  const dt = Math.min(0.05, t - lastT);
+  lastT = t;
+  update(dt);
   render();
   requestAnimationFrame(loop);
 }
 
-// Resize canvas to fit window while keeping aspect
-function fit() {
-  const ratio = W / H;
-  const ww = window.innerWidth;
-  const wh = window.innerHeight;
-  let cw = ww, ch = ww / ratio;
-  if (ch > wh) { ch = wh; cw = wh * ratio; }
-  canvas.style.width = cw + "px";
-  canvas.style.height = ch + "px";
+// ---------- Start ----------
+function startGame() {
+  // Reset state
+  day = 1;
+  timeOfDay = 0;
+  dayEl.textContent = '1';
+  for (let i = 0; i < INV_SIZE; i++) inventory[i] = null;
+  invSelected = 0;
+  spawnItems();
+  // Restore granny patrol
+  granny.x = 16*TS; granny.y = 3*TS;
+  granny.state = 'patrol'; granny.path = []; granny.patrolIdx = 0;
+  granny.stunTimer = 0; granny.attackCooldown = 0;
+  // Player
+  spawnPlayer();
+  setHP(100); setStamina(100); setNoise(0);
+  // Restore broken doors
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      const c = M[y][x];
+      if (c === '3') grid[y][x] = TILE_DOOR;
+    }
+  }
+  renderInv();
+  // overlay
+  overlay.classList.add('hidden');
+  // Re-init overlay text in case it was changed
+  setTimeout(()=>{
+    overlay.querySelector('h1').textContent = "GRANDMA'S HOUSE";
+    overlay.querySelector('h1').style.color = "#b00";
+    overlay.querySelector('h2').textContent = "YOU HAVE 5 DAYS";
+    startBtn.textContent = "START";
+  }, 800);
+  running = true;
+  lastT = performance.now()/1000;
+  // resume audio
+  try { ac().resume(); } catch (e) {}
 }
-window.addEventListener("resize", fit);
-fit();
 
-startBtn.addEventListener("click", () => {
-  ensureAudio();
-  overlay.classList.add("hidden");
-  resetGame();
-});
+startBtn.addEventListener('click', startGame);
 
-// Initial build so the title screen has a backdrop too
-buildWorld();
+// Kick off render loop even before start (shows menu darkness)
+renderInv();
 requestAnimationFrame(loop);
+
 </script>
 </body>
 </html>
