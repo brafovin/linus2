@@ -141,8 +141,8 @@
   <p>
     Ein Skibidi Toilet verfolgt dich.<br>
     Wenn er dich schnappt — wirst du <b>ANGEKACKT</b>. 💩<br><br>
-    Sammle <b>Klopapier</b> 🧻 für Punkte und <b>Pömpel</b> für Sprintkraft.<br>
-    Überlebe so lange wie möglich!<br><br>
+    Sammle <b>Klopapier</b> 🧻 für Punkte, <b>Pömpel</b> für Sprintkraft<br>
+    und <b>Sigma-Brillen</b> 😎 für RIZZ-MODE — dann fliehen sie vor dir!<br><br>
     <span class="key">WASD</span> oder <span class="key">Pfeile</span> &nbsp;bewegen<br>
     <span class="key">SHIFT</span> sprinten<br>
   </p>
@@ -227,6 +227,14 @@ function pickupSound() {
   tone(660, 0.08, "triangle", 0.18);
   setTimeout(() => tone(880, 0.1, "triangle", 0.18), 80);
 }
+function rizzSound() {
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  const notes = [523, 659, 784, 988, 1175];
+  notes.forEach((f, i) => {
+    setTimeout(() => tone(f, 0.16, "sawtooth", 0.12), i * 80);
+  });
+}
 function flushSound() {
   if (!audioCtx) return;
   const t = audioCtx.currentTime;
@@ -253,8 +261,11 @@ let walls = [];
 let bushes = [];
 let toiletPapers = [];
 let plungers = [];
+let rizzGlasses = [];
 let player, toilet;
 let toilets = [];
+let rizzTimer = 0;
+const RIZZ_DURATION = 6.0;
 
 function rectsOverlap(a, b) {
   return a.x < b.x + b.w && a.x + a.w > b.x &&
@@ -321,6 +332,23 @@ function buildWorld() {
       }
     }
     toiletPapers.push({ x, y, picked: false });
+  }
+
+  // Rizz glasses pickups
+  rizzGlasses = [];
+  for (let i = 0; i < 4; i++) {
+    let x, y, ok = false, tries = 0;
+    while (!ok && tries++ < 50) {
+      x = 200 + Math.random() * (WORLD_W - 400);
+      y = 200 + Math.random() * (WORLD_H - 400);
+      ok = true;
+      for (const w of walls) {
+        if (x > w.x - 30 && x < w.x + w.w + 30 && y > w.y - 30 && y < w.y + w.h + 30) {
+          ok = false; break;
+        }
+      }
+    }
+    rizzGlasses.push({ x, y, picked: false });
   }
 
   // Plunger pickups
@@ -404,6 +432,7 @@ function resetGame() {
   score = 0;
   particles = [];
   screenShake = 0;
+  rizzTimer = 0;
   poopOverlay.classList.remove("active");
   say("Skibidi dop dop dop yes yes!", 3000);
 }
@@ -487,6 +516,19 @@ function update(dt) {
       say("Pömpel! Mehr Sprint!", 2000);
     }
   }
+  for (const rg of rizzGlasses) {
+    if (rg.picked) continue;
+    const dx = player.x - rg.x, dy = player.y - rg.y;
+    if (dx * dx + dy * dy < 32 * 32) {
+      rg.picked = true;
+      rizzTimer = RIZZ_DURATION;
+      score += 50;
+      rizzSound();
+      spawnParticles(rg.x, rg.y, "#ffe14a", 24);
+      say("SIGMA RIZZ MODE — sie fliehen vor dir!", 2500);
+    }
+  }
+  if (rizzTimer > 0) rizzTimer -= dt;
 
   // Toilets AI
   for (const t of toilets) {
@@ -500,10 +542,12 @@ function update(dt) {
     // Difficulty ramp: toilets speed up over time
     t.speed = t.baseSpeed + survivalTime * 1.5;
 
-    const dx = player.x - t.x, dy = player.y - t.y;
-    const dist = Math.hypot(dx, dy);
+    const fleeing = rizzTimer > 0;
+    const dirX = fleeing ? (t.x - player.x) : (player.x - t.x);
+    const dirY = fleeing ? (t.y - player.y) : (player.y - t.y);
+    const dist = Math.hypot(dirX, dirY);
     if (dist > 1) {
-      let ang = Math.atan2(dy, dx);
+      let ang = Math.atan2(dirY, dirX);
       let testX = t.x + Math.cos(ang) * t.speed * dt;
       let testY = t.y + Math.sin(ang) * t.speed * dt;
       let blocked = false;
@@ -526,9 +570,9 @@ function update(dt) {
       t.angle = ang;
     }
 
-    // Caught!
+    // Caught! (but not while Rizz mode is active — they're too intimidated)
     const pdx = player.x - t.x, pdy = player.y - t.y;
-    if (pdx * pdx + pdy * pdy < (player.r + t.r) * (player.r + t.r)) {
+    if (rizzTimer <= 0 && pdx * pdx + pdy * pdy < (player.r + t.r) * (player.r + t.r)) {
       state = "dead";
       poopSound();
       screenShake = 1.0;
@@ -652,6 +696,32 @@ function render() {
     ctx.restore();
   }
 
+  // Pickups: rizz glasses
+  for (const rg of rizzGlasses) {
+    if (rg.picked) continue;
+    const bob = Math.sin(performance.now() / 220 + rg.x) * 4;
+    ctx.save();
+    ctx.translate(rg.x, rg.y + bob);
+    // Sparkle aura
+    const pulse = 0.4 + 0.4 * Math.sin(performance.now() / 150);
+    ctx.fillStyle = `rgba(255,225,74,${pulse * 0.5})`;
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.fill();
+    // Sunglasses
+    ctx.fillStyle = "#000";
+    ctx.fillRect(-12, -3, 24, 2);
+    ctx.beginPath();
+    ctx.ellipse(-6, 1, 6, 5, 0, 0, Math.PI * 2);
+    ctx.ellipse(6, 1, 6, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Lens highlights
+    ctx.fillStyle = "#ffe14a";
+    ctx.fillRect(-9, -2, 3, 2);
+    ctx.fillRect(3, -2, 3, 2);
+    ctx.restore();
+  }
+
   // Pickups: plungers
   for (const pl of plungers) {
     if (pl.picked) continue;
@@ -690,6 +760,19 @@ function render() {
   for (const t of toilets) drawToilet(t);
 
   ctx.restore();
+
+  // Rizz mode golden tint
+  if (rizzTimer > 0) {
+    const intensity = Math.min(1, rizzTimer / 1.5);
+    ctx.fillStyle = `rgba(255,225,74,${0.15 * intensity})`;
+    ctx.fillRect(0, 0, W, H);
+    // Vignette of light
+    const grad = ctx.createRadialGradient(W/2, H/2, 100, W/2, H/2, Math.max(W,H));
+    grad.addColorStop(0, "rgba(255,200,60,0)");
+    grad.addColorStop(1, `rgba(255,200,60,${0.35 * intensity})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+  }
 
   drawHud();
 }
@@ -732,16 +815,26 @@ function drawPlayer() {
   ctx.fillStyle = "#3a2a1a";
   ctx.fillRect(-7, -19, 14, 4);
 
-  // Eyes (looking forward in rotation direction)
-  ctx.fillStyle = "#000";
-  ctx.fillRect(-3, -13, 2, 2);
-  ctx.fillRect(1, -13, 2, 2);
-
-  // Scared mouth
-  ctx.fillStyle = "#660000";
-  ctx.beginPath();
-  ctx.arc(0, -9, 2, 0, Math.PI * 2);
-  ctx.fill();
+  if (rizzTimer > 0) {
+    // Sigma sunglasses
+    ctx.fillStyle = "#000";
+    ctx.fillRect(-6, -14, 12, 1);
+    ctx.fillRect(-6, -13, 5, 3);
+    ctx.fillRect(1, -13, 5, 3);
+    // smug smirk
+    ctx.fillStyle = "#660000";
+    ctx.fillRect(-2, -9, 4, 1);
+  } else {
+    // Eyes
+    ctx.fillStyle = "#000";
+    ctx.fillRect(-3, -13, 2, 2);
+    ctx.fillRect(1, -13, 2, 2);
+    // Scared mouth
+    ctx.fillStyle = "#660000";
+    ctx.beginPath();
+    ctx.arc(0, -9, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   ctx.restore();
 }
@@ -858,6 +951,7 @@ function drawHud() {
     <div>💩 PUNKTE: ${score}</div>
     <div>⚡ SPRINT: ${sprintBar}</div>
     <div>🚽 TOILETTEN: ${toilets.length}</div>
+    ${rizzTimer > 0 ? `<div style="color:#ffe14a">😎 SIGMA RIZZ: ${rizzTimer.toFixed(1)}s</div>` : ""}
     ${bestTime > 0 ? `<div style="color:#ffe14a">🏆 REKORD: ${bestTime.toFixed(1)}s</div>` : ""}
   `;
 }
